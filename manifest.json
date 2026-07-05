@@ -1,0 +1,37 @@
+{
+  "id": "balance-system",
+  "name": {
+    "en": "Viewer balance system",
+    "ru": "Система баланса зрителей",
+    "uk": "Система балансу глядачів"
+  },
+  "description": {
+    "en": "Tracks donations without triggers, manages viewer balances, and exposes a Twitch-authenticated web page for spending balance on stream actions.",
+    "ru": "Учитывает донаты без триггеров, ведёт баланс зрителей и предоставляет веб-страницу с авторизацией Twitch для траты баланса на действия на стриме.",
+    "uk": "Враховує донати без тригерів, веде баланс глядачів і надає веб-сторінку з авторизацією Twitch для витрати балансу на дії на стрімі."
+  },
+  "type": "application",
+  "version": "1.0.0",
+  "author": "XanderWP",
+  "icon": "logo.png",
+  "depends_on": ["twitch"],
+  "permissions": [
+    "WEB_CONTENT",
+    "WEB_END_POINTS",
+    "DASHBOARD_EVENTS_INCOMING",
+    "DASHBOARD_EVENTS",
+    "NETWORK_REQUEST",
+    "NETWORK_WEBSOCKET",
+    "CONFIG_READ",
+    "INCREASE_CONFIG_SIZE",
+    "STATUS",
+    "NOTIFY"
+  ],
+  "app_version": "1.0.21",
+  "web": "index.html",
+  "web_type": "application",
+  "web_contents": [
+    "style.css",
+    "app.js"
+  ]
+}

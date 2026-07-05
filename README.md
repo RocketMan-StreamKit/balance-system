@@ -1,0 +1,68 @@
+# Viewer balance system
+
+StreamKit+ application addon for **Twitch** streamers: tracks donations that did not trigger overlays/sounds/hotkeys, maintains per-viewer balances with currency conversion, and exposes a public web page where viewers spend balance on configured stream actions.
+
+- **Addon id:** `balance-system`
+- **Type:** `application`
+- **Depends on:** `twitch`
+- **Minimum StreamKit+:** `1.0.21`
+
+## Features
+
+- Credits balance from dashboard **donation** events with **empty** `attach` (no overlay/sound/hotkey/timer fired)
+- Stores viewers by **Twitch id + login** (login change safe)
+- Balance currency: app default or USD / RUB / UAH / EUR / KZT / BYN
+- In-app window: search, sort, add/edit/delete viewers; **Shop** tab to bind overlay/sound/timer triggers to purchasable items (StreamKit+ `styles.css`)
+- Registers **Site activation** dashboard trigger (`valueType: number`, cost in balance currency) for overlays/sounds
+- Backend sync + Socket.IO spend commands (see [BACKEND.md](./BACKEND.md))
+- RPC `creditBalance` for other addons (opt-in setting)
+
+## Development
+
+```bash
+npm install
+npm run build
+```
+
+Install the `dist/` folder in **StreamKit+ → Settings → Applications**.
+
+Enable **Twitch** addon and authorize the broadcaster account before using balance sync.
+
+In **developer mode**, choose API server in addon settings (`rocketman-streams.com`, `ru.rocketman-streams.com`, or `local.rocketman-streams.com`).
+
+## Settings
+
+| Option | Description |
+| --- | --- |
+| Balance currency | Storage/display currency (default: same as app) |
+| Allow other addons to credit balance | Enables RPC `creditBalance` |
+| API server (dev only) | Manual backend host selection |
+| Viewer page URL | Auto-filled after backend registration |
+
+**Shop** items are configured in the application window (**Shop** tab). Pick a trigger already used in overlay, sounds, timer, hotkeys, or game rules, set price and localized name. Items appear on the viewer web page after backend sync.
+
+## Viewer page
+
+After the addon connects to the backend, copy **Viewer page URL** from settings or the application window.
+
+Format: `https://rocketman-streams.com/?streamkit={LICENSE_ID}`
+
+## RPC example
+
+```js
+const res = await addons.request(
+  'balance-system',
+  'creditBalance',
+  { login: 'viewer_login', amount: 5 }
+);
+```
+
+## Backend
+
+Server implementation is **not** part of this repository. Full API and page specification: **[BACKEND.md](./BACKEND.md)**.
+
+## Release
+
+Push to `main` or run the **Release addon** GitHub Action. Tag `v{version}` from `manifest.json`.
+
+Docs: [StreamKit+ addon developer docs](https://rocketman-streamkit.github.io/types/)

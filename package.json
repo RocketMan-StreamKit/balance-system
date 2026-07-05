@@ -1,0 +1,15 @@
+{
+  "name": "xxanderwp-streamkit-addon-balance-system",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Viewer balance system for StreamKit+ (Twitch).",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@rocketman-streamkit/types": "^1.0.21",
+    "esbuild": "^0.25.5",
+    "typescript": "^5.8.3"
+  }
+}

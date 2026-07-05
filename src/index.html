@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Viewer balance</title>
+    <link rel="stylesheet" href="/data/styles.css" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="balance-app">
+      <header class="balance-header">
+        <div>
+          <h1 id="title">Viewer balance</h1>
+          <p class="balance-meta">
+            <span id="currency-label"></span>
+            <span id="viewer-count"></span>
+          </p>
+        </div>
+        <div class="balance-header-actions">
+          <label class="balance-field balance-field--inline">
+            <span id="viewer-page-label">Viewer page</span>
+            <div class="balance-copy-row">
+              <input id="viewer-page-url" class="input" type="text" readonly />
+              <button id="copy-page-url" class="btn btn-secondary" type="button">Copy</button>
+            </div>
+          </label>
+        </div>
+      </header>
+
+      <nav class="balance-tabs card">
+        <button id="tab-viewers" class="balance-tab balance-tab--active" type="button">Viewers</button>
+        <button id="tab-shop" class="balance-tab" type="button">Shop</button>
+      </nav>
+
+      <section id="panel-viewers" class="balance-panel">
+        <section class="balance-toolbar card">
+          <input id="search" class="input" type="search" placeholder="Search…" />
+          <select id="sort" class="input">
+            <option value="balance_desc">Balance ↓</option>
+            <option value="balance_asc">Balance ↑</option>
+            <option value="login_asc">Login A–Z</option>
+            <option value="login_desc">Login Z–A</option>
+          </select>
+          <button id="add-viewer" class="btn btn-primary" type="button">Add viewer</button>
+        </section>
+
+        <section class="balance-table card">
+          <table>
+            <thead>
+              <tr>
+                <th>Login</th>
+                <th>Name</th>
+                <th>Balance</th>
+                <th id="actions-header">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="viewers-body">
+              <tr><td colspan="4" id="loading-cell">Loading…</td></tr>
+            </tbody>
+          </table>
+        </section>
+      </section>
+
+      <section id="panel-shop" class="balance-panel balance-panel--hidden">
+        <section class="balance-toolbar card">
+          <p id="shop-hint" class="balance-hint"></p>
+          <button id="add-shop-item" class="btn btn-primary" type="button">Add shop item</button>
+        </section>
+
+        <section class="balance-table card">
+          <table>
+            <thead>
+              <tr>
+                <th id="shop-name-header">Name</th>
+                <th id="shop-price-header">Price</th>
+                <th id="shop-trigger-header">Trigger</th>
+                <th id="shop-systems-header">Systems</th>
+                <th id="shop-actions-header">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="shop-body">
+              <tr><td colspan="5" id="shop-loading-cell">Loading…</td></tr>
+            </tbody>
+          </table>
+        </section>
+      </section>
+    </div>
+
+    <dialog id="editor-dialog" class="balance-dialog">
+      <form id="editor-form" method="dialog">
+        <h2 id="editor-title">Add viewer</h2>
+        <label class="balance-field">
+          <span id="login-label">Twitch login</span>
+          <input id="editor-login" class="input" type="text" required />
+        </label>
+        <label class="balance-field">
+          <span id="balance-label">Balance</span>
+          <input id="editor-balance" class="input" type="number" step="0.01" required />
+        </label>
+        <div class="balance-dialog-actions">
+          <button type="button" id="editor-cancel" class="btn btn-secondary">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="editor-save">Save</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="shop-dialog" class="balance-dialog">
+      <form id="shop-form" method="dialog">
+        <h2 id="shop-editor-title">Add shop item</h2>
+        <label class="balance-field">
+          <span id="shop-trigger-label">Trigger source</span>
+          <select id="shop-trigger" class="input" required></select>
+        </label>
+        <label class="balance-field">
+          <span id="shop-price-label">Price</span>
+          <input id="shop-price" class="input" type="number" min="0" step="0.01" required />
+        </label>
+        <label class="balance-field">
+          <span id="shop-name-label">Name (EN)</span>
+          <input id="shop-name-en" class="input" type="text" required />
+        </label>
+        <label class="balance-field">
+          <span id="shop-name-ru-label">Name (RU)</span>
+          <input id="shop-name-ru" class="input" type="text" />
+        </label>
+        <label class="balance-field">
+          <span id="shop-name-uk-label">Name (UK)</span>
+          <input id="shop-name-uk" class="input" type="text" />
+        </label>
+        <label class="balance-field">
+          <span id="shop-description-label">Description (EN)</span>
+          <input id="shop-description-en" class="input" type="text" />
+        </label>
+        <div class="balance-dialog-actions">
+          <button type="button" id="shop-cancel" class="btn btn-secondary">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="shop-save">Save</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="app.js"></script>
+  </body>
+</html>

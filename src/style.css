@@ -1,0 +1,145 @@
+.balance-app {
+  padding: 20px;
+  max-width: 1100px;
+  margin: 0 auto;
+  color: var(--text);
+}
+
+.balance-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.balance-header h1 {
+  margin: 0 0 8px;
+  font-size: 1.5rem;
+}
+
+.balance-meta {
+  margin: 0;
+  color: var(--text-secondary, #9aa0a6);
+  display: flex;
+  gap: 12px;
+}
+
+.balance-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  margin-bottom: 16px;
+}
+
+.balance-tab {
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  background: transparent;
+  color: var(--text);
+  border-radius: 6px;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
+.balance-tab--active {
+  background: var(--bg-hover, rgba(255, 255, 255, 0.08));
+}
+
+.balance-panel--hidden {
+  display: none;
+}
+
+.balance-hint {
+  margin: 0;
+  flex: 1;
+  color: var(--text-secondary, #9aa0a6);
+}
+
+.balance-field-hint {
+  color: var(--text-secondary, #9aa0a6);
+  font-size: 0.85rem;
+}
+
+.balance-toolbar {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 12px;
+}
+
+.balance-table {
+  padding: 0;
+  overflow: auto;
+}
+
+.balance-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.balance-table th,
+.balance-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  text-align: left;
+}
+
+.balance-table tbody tr:hover {
+  background: var(--bg-hover, rgba(255, 255, 255, 0.04));
+}
+
+.balance-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.balance-field--inline {
+  min-width: 320px;
+}
+
+.balance-copy-row {
+  display: flex;
+  gap: 8px;
+}
+
+.balance-copy-row .input {
+  flex: 1;
+}
+
+.balance-row-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.balance-dialog {
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  border-radius: 8px;
+  padding: 16px;
+  background: var(--bg-elevated, #1e1e1e);
+  color: var(--text);
+  min-width: 360px;
+}
+
+.balance-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.balance-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+@media (max-width: 800px) {
+  .balance-header {
+    flex-direction: column;
+  }
+
+  .balance-toolbar {
+    grid-template-columns: 1fr;
+  }
+}
