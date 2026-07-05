@@ -3,6 +3,10 @@ import { registerBalanceConfig } from './config';
 import { subscribeDonationCredits, setDonationSyncHook } from './balance/donations';
 import { registerBalanceRpc } from './rpc';
 import {
+  bindViewerBackupOnSave,
+  restoreViewersFromBackup,
+} from './backend/backup';
+import {
   resyncBackend,
   startBackendConnection,
 } from './backend/sync';
@@ -13,9 +17,11 @@ import { registerBalanceDashboardTriggers } from './triggers/registry';
 import { syncShopFromBalanceRules } from './triggers/sync-from-applied';
 
 registerBalanceConfig();
+bindViewerBackupOnSave();
 
 void (async () => {
   await registerHttpEndpoints();
+  await restoreViewersFromBackup();
   registerBalanceRpc();
   await registerBalanceDashboardPlatform();
   registerBalanceTriggerLifecycle();

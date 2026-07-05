@@ -49,12 +49,19 @@ export type BalanceAddonParams = {
   currency: SupportedCurrency | 'app';
   api_server_override: string;
   allow_external_credit: boolean;
+  /** When true, viewer balances are uploaded to the balance backend backup API. */
+  viewer_backup_enabled: boolean;
   viewers: ViewerEntry[];
   categories: BalanceCategory[];
   shop_items: BalanceShopItem[];
   session_token: string;
   license_id: string;
   viewer_page_url: string;
+};
+
+/** Viewer list payload stored on the balance backend backup API. */
+export type ViewerBackupData = {
+  viewers: ViewerEntry[];
 };
 
 /** Payload sent to the balance backend on register/sync. */

@@ -65,6 +65,23 @@ export const registerBalanceConfig = () => {
       },
     },
     {
+      key: 'viewer_backup_enabled',
+      type: 'boolean',
+      default: true,
+      editor: {
+        label: {
+          en: 'Backup viewer balances on server',
+          ru: 'Бекапировать балансы зрителей на сервере',
+          uk: 'Бекапити баланси глядачів на сервері',
+        },
+        description: {
+          en: 'Uploads viewer balance data to the balance backend when it changes (at most once every 5 seconds).',
+          ru: 'Отправляет данные балансов зрителей на сервер баланса при изменениях (не чаще одного раза в 5 секунд).',
+          uk: 'Надсилає дані балансів глядачів на сервер балансу при змінах (не частіше одного разу на 5 секунд).',
+        },
+      },
+    },
+    {
       key: 'viewer_page_url',
       type: 'text',
       default: '',
@@ -116,6 +133,7 @@ export const registerBalanceConfig = () => {
     currency: 'app' as BalanceAddonParams['currency'],
     api_server_override: DEFAULT_API_SERVER,
     allow_external_credit: false,
+    viewer_backup_enabled: true,
     viewers_json: '[]',
     categories_json: '[]',
     shop_items_json: '[]',

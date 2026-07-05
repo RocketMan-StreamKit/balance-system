@@ -246,6 +246,44 @@ Namespace auth packet:
 
 If addon socket is disconnected → show trigger buttons disabled + toast “stream offline”.
 
+## Viewer backup API
+
+License auth uses `resolveLicense` (`licenseId` + MD5 HWID as `accessToken`).
+
+### `GET /api/streamkit-balance/backup`
+
+Query: `licenseId`, `accessToken`
+
+Response:
+
+```json
+{ "success": true, "data": { "viewers": [...] } }
+```
+
+`data` is `null` when no backup file exists yet.
+
+### `POST /api/streamkit-balance/backup`
+
+Body:
+
+```json
+{
+  "licenseId": "12345",
+  "accessToken": "a1b2c3d4...",
+  "data": { "viewers": [...] }
+}
+```
+
+Response: `{ "success": true }`
+
+Request body limit: **32 MB**.
+
+| Code | HTTP |
+| --- | --- |
+| `invalid_request` | 400 |
+| `license_invalid` | 403 |
+| `backup_read_failed` / `backup_write_failed` | 500 |
+
 ## Viewer web page (`?streamkit=LICENSE_ID`)
 
 ### Languages

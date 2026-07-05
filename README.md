@@ -15,6 +15,7 @@ StreamKit+ application addon for **Twitch** streamers: tracks donations that did
 - In-app window: search, sort, add/edit/delete viewers; **Shop** tab to bind overlay/sound/timer triggers to purchasable items (StreamKit+ `styles.css`)
 - Registers **Site activation** dashboard trigger (`valueType: number`, cost in balance currency) for overlays/sounds
 - Backend sync + Socket.IO spend commands (see [BACKEND.md](./BACKEND.md))
+- Server backup of viewer balances (restore from server on startup when local list is empty, debounced upload on changes)
 - RPC `creditBalance` for other addons (opt-in setting)
 
 ## Development
@@ -36,6 +37,7 @@ In **developer mode**, choose API server in addon settings (`rocketman-streams.c
 | --- | --- |
 | Balance currency | Storage/display currency (default: same as app) |
 | Allow other addons to credit balance | Enables RPC `creditBalance` |
+| Backup viewer balances on server | Uploads viewer data to backend backup API (default: on) |
 | API server (dev only) | Manual backend host selection |
 | Viewer page URL | Auto-filled after backend registration |
 

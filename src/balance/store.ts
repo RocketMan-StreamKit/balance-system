@@ -16,6 +16,23 @@ export const parseViewers = (raw: unknown): ViewerEntry[] => {
 /** Serializes viewers for params storage. */
 export const serializeViewers = (viewers: ViewerEntry[]) => JSON.stringify(viewers);
 
+type SaveParamsOptions = {
+  /** When true, skips debounced server backup upload. */
+  skipBackup?: boolean;
+};
+
+type ViewerSavedHook = (viewers: ViewerEntry[]) => void;
+
+let onViewersSaved: ViewerSavedHook | null = null;
+
+/**
+ * Registers a callback invoked after viewer list persistence.
+ * @param hook Called with the saved viewer list.
+ */
+export const setViewerSavedHook = (hook: ViewerSavedHook | null) => {
+  onViewersSaved = hook;
+};
+
 /**
  * Loads current addon params with parsed viewers list.
  * @example const params = await loadParams();
@@ -29,6 +46,7 @@ export const loadParams = async (): Promise<BalanceAddonParams> => {
 
   return {
     ...params,
+    viewer_backup_enabled: params.viewer_backup_enabled !== false,
     viewers: parseViewers(params.viewers_json),
     categories: parseJsonArray(params.categories_json),
     shop_items: parseJsonArray(params.shop_items_json),
@@ -44,7 +62,8 @@ export const saveParams = async (
     viewers?: ViewerEntry[];
     categories?: BalanceAddonParams['categories'];
     shop_items?: BalanceAddonParams['shop_items'];
-  }
+  },
+  options?: SaveParamsOptions
 ) => {
   const current = await loadParams();
   const next = { ...current, ...patch };
@@ -68,6 +87,11 @@ export const saveParams = async (
   delete payload.shop_items;
 
   await api.config.updateParams(payload);
+
+  if (patch.viewers !== undefined && !options?.skipBackup) {
+    onViewersSaved?.(patch.viewers);
+  }
+
   return loadParams();
 };
 
