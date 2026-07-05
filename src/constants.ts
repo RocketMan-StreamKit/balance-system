@@ -1,9 +1,6 @@
 /** Stable addon identifier from manifest.json. */
 export const ADDON_ID = 'balance-system';
 
-/** Addon id accepted by the balance backend register endpoint. */
-export const BACKEND_ADDON_ID = 'XXanderWP/streamkit-addon-balance-system';
-
 /** Viewer page grouping id for sound actions (not an installable addon). */
 export const SOUNDS_CATALOG_GROUP = 'streamkit-balance:sounds' as const;
 

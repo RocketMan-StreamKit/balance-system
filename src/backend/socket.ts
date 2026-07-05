@@ -61,6 +61,7 @@ export class BalanceSocketClient {
   private lastPacketAt = 0;
   private reconnectAttempt = 0;
   private lastNamespaceConnectedAt = 0;
+  private pendingNamespaceClose = false;
   private stableConnectionTimer: ReturnType<typeof setTimeout> | null = null;
   private static readonly RECONNECT_BASE_MS = 3_000;
   private static readonly RECONNECT_MAX_MS = 60_000;
@@ -158,18 +159,23 @@ export class BalanceSocketClient {
       this.stopPing();
       this.activeSocket = null;
 
-      const closeInfo =
-        payload && typeof payload === 'object'
-          ? (payload as { code?: number; reason?: string })
-          : undefined;
-      console.warn(
-        '[balance] socket closed',
-        closeInfo?.code ?? '',
-        closeInfo?.reason ?? ''
-      );
+      const initiatedByNamespace = this.pendingNamespaceClose;
+      this.pendingNamespaceClose = false;
+
+      if (!this.intentionalClose && !initiatedByNamespace) {
+        const closeInfo =
+          payload && typeof payload === 'object'
+            ? (payload as { code?: number; reason?: string })
+            : undefined;
+        console.warn(
+          '[balance] socket closed unexpectedly',
+          closeInfo?.code ?? '',
+          closeInfo?.reason ?? ''
+        );
+      }
 
       if (!this.intentionalClose) {
-        this.scheduleReconnect();
+        this.scheduleReconnect(initiatedByNamespace ? 'namespace' : 'transport');
       }
     });
 
@@ -232,18 +238,22 @@ export class BalanceSocketClient {
     }
 
     if (socketIoType === '1') {
-      console.warn('[balance] namespace disconnected:', socketIoPayload);
+      const reason = this.formatNamespaceDisconnectReason(socketIoPayload);
+      console.warn('[balance] namespace disconnected', reason);
       this.namespaceConnected = false;
       this.stopPing();
-      this.closeActiveSocket();
+      this.closeAfterNamespaceEnd();
       return;
     }
 
     if (socketIoType === '4') {
-      console.error('[balance] namespace error:', socketIoPayload);
+      console.error(
+        '[balance] namespace connect rejected:',
+        this.formatNamespaceDisconnectReason(socketIoPayload)
+      );
       this.namespaceConnected = false;
       this.stopPing();
-      this.closeActiveSocket();
+      this.closeAfterNamespaceEnd();
       return;
     }
 
@@ -312,16 +322,22 @@ export class BalanceSocketClient {
     }
   }
 
-  private scheduleReconnect() {
+  private scheduleReconnect(reason: 'namespace' | 'transport') {
     if (this.reconnectTimer || this.intentionalClose) {
       return;
     }
 
     this.reconnectAttempt += 1;
     const delayMs = this.getReconnectDelayMs();
-    console.warn(
-      `[balance] scheduling reconnect in ${Math.round(delayMs / 1000)}s (attempt ${this.reconnectAttempt})`
-    );
+    if (this.reconnectAttempt === 1) {
+      console.warn(
+        `[balance] socket disconnected (${reason}), reconnect in ${Math.round(delayMs / 1000)}s`
+      );
+    } else if (this.reconnectAttempt % 3 === 0) {
+      console.warn(
+        `[balance] socket still offline, retry ${this.reconnectAttempt} in ${Math.round(delayMs / 1000)}s`
+      );
+    }
 
     this.reconnectTimer = setTimeout(async () => {
       this.reconnectTimer = null;
@@ -332,7 +348,7 @@ export class BalanceSocketClient {
         await this.connect();
       } catch (error) {
         console.error('[balance] socket reconnect failed:', error);
-        this.scheduleReconnect();
+        this.scheduleReconnect('transport');
       }
     }, delayMs);
   }
@@ -366,6 +382,11 @@ export class BalanceSocketClient {
     }, BalanceSocketClient.STABLE_CONNECTION_MS);
   }
 
+  private closeAfterNamespaceEnd() {
+    this.pendingNamespaceClose = true;
+    this.closeActiveSocket();
+  }
+
   private closeActiveSocket() {
     const socket = this.activeSocket;
     if (!socket) {
@@ -377,6 +398,24 @@ export class BalanceSocketClient {
     } catch (error) {
       console.warn('[balance] socket close failed:', error);
     }
+  }
+
+  private formatNamespaceDisconnectReason(payload: string) {
+    const trimmed = payload.trim();
+    if (!trimmed) {
+      return '(no reason)';
+    }
+
+    try {
+      const parsed = JSON.parse(trimmed) as { message?: string };
+      if (typeof parsed.message === 'string' && parsed.message.trim()) {
+        return parsed.message.trim();
+      }
+    } catch {
+      // Plain-text disconnect reason from server.
+    }
+
+    return trimmed;
   }
 
   private clearStableConnectionTimer() {

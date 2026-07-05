@@ -1,5 +1,4 @@
 import {
-  BACKEND_ADDON_ID,
   BALANCE_SOCKET_NAMESPACE,
   BALANCE_SOCKET_PATH,
 } from '../constants';
@@ -17,6 +16,14 @@ import { BalanceSocketClient } from './socket';
 import { parseRegisterResponse, resolveLicenseAuth } from './register';
 
 let socketClient: BalanceSocketClient | null = null;
+
+const buildSocketAuth = (params: {
+  session_token: string;
+  license_id: string;
+}) => ({
+  sessionToken: params.session_token,
+  licenseId: params.license_id,
+});
 
 /**
  * Builds the payload sent to the balance backend.
@@ -69,7 +76,6 @@ export const registerBackendSession = async () => {
   const url = await buildApiUrl('/register', params);
   const licenseAuth = resolveLicenseAuth();
   const body = {
-    addonId: BACKEND_ADDON_ID,
     ...licenseAuth,
     streamer,
   };
@@ -122,39 +128,14 @@ export const connectBalanceSocket = async () => {
     host,
     BALANCE_SOCKET_PATH,
     BALANCE_SOCKET_NAMESPACE,
-    {
-      sessionToken: refreshed.session_token,
-      licenseId: refreshed.license_id,
-      addonId: data.id,
-    }
+    buildSocketAuth(refreshed)
   );
 
-  socketClient.setReconnectHook(async ({ attempt, quickDisconnect }) => {
-    const shouldRefreshSession = quickDisconnect || attempt >= 2;
-
-    if (shouldRefreshSession) {
-      await registerBackendSession();
-      const params = await loadParams();
-      socketClient?.updateAuth({
-        sessionToken: params.session_token,
-        licenseId: params.license_id,
-        addonId: data.id,
-      });
-    }
-
-    if (shouldRefreshSession || attempt === 1) {
-      const sync = await syncStateToBackend();
-      if (!sync.success && !shouldRefreshSession) {
-        await registerBackendSession();
-        const params = await loadParams();
-        socketClient?.updateAuth({
-          sessionToken: params.session_token,
-          licenseId: params.license_id,
-          addonId: data.id,
-        });
-        await syncStateToBackend();
-      }
-    }
+  socketClient.setReconnectHook(async () => {
+    await registerBackendSession();
+    const params = await loadParams();
+    socketClient?.updateAuth(buildSocketAuth(params));
+    await syncStateToBackend();
   });
 
   socketClient.onEvent(async (event, payload) => {
