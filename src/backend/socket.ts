@@ -2,6 +2,16 @@ import { buildWebSocketConnectUrl } from './urls';
 
 type SocketHandler = (event: string, data: unknown) => void | Promise<void>;
 
+/** Context passed to the reconnect hook before opening a new socket. */
+export type BalanceSocketReconnectContext = {
+  /** 1-based reconnect attempt since the last stable connection. */
+  attempt: number;
+  /** Previous namespace session ended within a few seconds of connect. */
+  quickDisconnect: boolean;
+};
+
+type ReconnectHook = (context: BalanceSocketReconnectContext) => void | Promise<void>;
+
 type AddonWebSocket = {
   On: (
     event: 'open' | 'message' | 'close' | 'error',
@@ -45,10 +55,17 @@ export class BalanceSocketClient {
   private auth: Record<string, unknown>;
   private readonly socketPath: string;
   private readonly hostBase: string;
-  private onReconnect: (() => void | Promise<void>) | null = null;
+  private onReconnect: ReconnectHook | null = null;
   private intentionalClose = false;
   private pingInterval = 25_000;
   private lastPacketAt = 0;
+  private reconnectAttempt = 0;
+  private lastNamespaceConnectedAt = 0;
+  private stableConnectionTimer: ReturnType<typeof setTimeout> | null = null;
+  private static readonly RECONNECT_BASE_MS = 3_000;
+  private static readonly RECONNECT_MAX_MS = 60_000;
+  private static readonly STABLE_CONNECTION_MS = 15_000;
+  private static readonly QUICK_DISCONNECT_MS = 5_000;
 
   /**
    * @param hostBase API origin, e.g. `https://rocketman-streams.com:443`.
@@ -80,7 +97,7 @@ export class BalanceSocketClient {
    * Registers callback fired after reconnect (full resync expected).
    * @param hook Resync hook.
    */
-  setReconnectHook(hook: (() => void | Promise<void>) | null) {
+  setReconnectHook(hook: ReconnectHook | null) {
     this.onReconnect = hook;
   }
 
@@ -112,7 +129,14 @@ export class BalanceSocketClient {
     previousSocket?.Destroy();
 
     const url = buildWebSocketConnectUrl(this.hostBase, this.socketPath);
-    console.log('[balance] socket connect →', url);
+    if (this.reconnectAttempt <= 1) {
+      console.log('[balance] socket connect →', url);
+    } else {
+      console.warn(
+        `[balance] socket reconnect attempt ${this.reconnectAttempt} →`,
+        url
+      );
+    }
 
     const socket = await network.websocket.connect(url);
     this.activeSocket = socket;
@@ -161,6 +185,7 @@ export class BalanceSocketClient {
   destroy() {
     this.intentionalClose = true;
     this.clearReconnect();
+    this.clearStableConnectionTimer();
     this.stopPing();
     this.namespaceConnected = false;
     this.activeSocket?.Destroy();
@@ -199,7 +224,9 @@ export class BalanceSocketClient {
 
     if (socketIoType === '0') {
       this.namespaceConnected = true;
+      this.lastNamespaceConnectedAt = Date.now();
       this.startPing();
+      this.scheduleStableConnectionReset();
       console.log('[balance] socket namespace connected');
       return;
     }
@@ -208,6 +235,7 @@ export class BalanceSocketClient {
       console.warn('[balance] namespace disconnected:', socketIoPayload);
       this.namespaceConnected = false;
       this.stopPing();
+      this.closeActiveSocket();
       return;
     }
 
@@ -215,6 +243,7 @@ export class BalanceSocketClient {
       console.error('[balance] namespace error:', socketIoPayload);
       this.namespaceConnected = false;
       this.stopPing();
+      this.closeActiveSocket();
       return;
     }
 
@@ -288,18 +317,73 @@ export class BalanceSocketClient {
       return;
     }
 
+    this.reconnectAttempt += 1;
+    const delayMs = this.getReconnectDelayMs();
+    console.warn(
+      `[balance] scheduling reconnect in ${Math.round(delayMs / 1000)}s (attempt ${this.reconnectAttempt})`
+    );
+
     this.reconnectTimer = setTimeout(async () => {
       this.reconnectTimer = null;
       try {
         if (this.onReconnect) {
-          await this.onReconnect();
+          await this.onReconnect(this.buildReconnectContext());
         }
         await this.connect();
       } catch (error) {
         console.error('[balance] socket reconnect failed:', error);
         this.scheduleReconnect();
       }
-    }, 3_000);
+    }, delayMs);
+  }
+
+  private buildReconnectContext(): BalanceSocketReconnectContext {
+    const connectedAt = this.lastNamespaceConnectedAt;
+    const quickDisconnect =
+      connectedAt > 0 &&
+      Date.now() - connectedAt < BalanceSocketClient.QUICK_DISCONNECT_MS;
+
+    return {
+      attempt: this.reconnectAttempt,
+      quickDisconnect,
+    };
+  }
+
+  private getReconnectDelayMs() {
+    const exponential = Math.min(
+      BalanceSocketClient.RECONNECT_MAX_MS,
+      BalanceSocketClient.RECONNECT_BASE_MS * 2 ** Math.max(0, this.reconnectAttempt - 1)
+    );
+    const jitterMs = Math.floor(Math.random() * 1_000);
+    return exponential + jitterMs;
+  }
+
+  private scheduleStableConnectionReset() {
+    this.clearStableConnectionTimer();
+    this.stableConnectionTimer = setTimeout(() => {
+      this.stableConnectionTimer = null;
+      this.reconnectAttempt = 0;
+    }, BalanceSocketClient.STABLE_CONNECTION_MS);
+  }
+
+  private closeActiveSocket() {
+    const socket = this.activeSocket;
+    if (!socket) {
+      return;
+    }
+
+    try {
+      socket.Close();
+    } catch (error) {
+      console.warn('[balance] socket close failed:', error);
+    }
+  }
+
+  private clearStableConnectionTimer() {
+    if (this.stableConnectionTimer) {
+      clearTimeout(this.stableConnectionTimer);
+      this.stableConnectionTimer = null;
+    }
   }
 
   private clearReconnect() {

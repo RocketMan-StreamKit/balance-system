@@ -19,6 +19,17 @@ type TwitchHelixUsersResponse = {
   data?: TwitchUser[];
 };
 
+type BroadcasterProfile = {
+  twitchId: string;
+  login: string;
+  displayName: string;
+  avatar: string;
+};
+
+const BROADCASTER_PROFILE_CACHE_MS = 5 * 60_000;
+let cachedBroadcasterProfile: BroadcasterProfile | null = null;
+let cachedBroadcasterProfileAt = 0;
+
 type TwitchApiGetResult = {
   success?: boolean;
   status?: number;
@@ -71,9 +82,33 @@ export const parseTwitchHelixResponse = (
 /**
  * Returns the authorized broadcaster profile from the Twitch addon.
  * Uses `getChannelId` for core identity and `apiGet` for avatar.
+ * @param options.force When true, bypasses the short-lived profile cache.
  * @example const profile = await getBroadcasterProfile();
  */
-export const getBroadcasterProfile = async () => {
+export const getBroadcasterProfile = async (options?: {
+  force?: boolean;
+}) => {
+  if (
+    !options?.force &&
+    cachedBroadcasterProfile &&
+    Date.now() - cachedBroadcasterProfileAt < BROADCASTER_PROFILE_CACHE_MS
+  ) {
+    return cachedBroadcasterProfile;
+  }
+
+  const profile = await fetchBroadcasterProfile();
+  if (profile) {
+    cachedBroadcasterProfile = profile;
+    cachedBroadcasterProfileAt = Date.now();
+  }
+
+  return profile;
+};
+
+/**
+ * Loads broadcaster profile from Twitch addon RPC without using the cache.
+ */
+const fetchBroadcasterProfile = async (): Promise<BroadcasterProfile | null> => {
   const channel = await addons.request(TWITCH_ADDON_ID, 'getChannelId', {});
   if (
     !channel.success ||

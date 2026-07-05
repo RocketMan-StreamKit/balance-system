@@ -59,7 +59,7 @@ export const buildSyncPayload = async (): Promise<BalanceSyncPayload | null> => 
  */
 export const registerBackendSession = async () => {
   const params = await loadParams();
-  const streamer = await getBroadcasterProfile();
+  const streamer = await getBroadcasterProfile({ force: true });
   if (!streamer) {
     throw new Error(
       'Twitch broadcaster profile is unavailable. Enable the Twitch addon and authorize your account.'
@@ -129,17 +129,31 @@ export const connectBalanceSocket = async () => {
     }
   );
 
-  socketClient.setReconnectHook(async () => {
-    const sync = await syncStateToBackend();
-    if (!sync.success) {
+  socketClient.setReconnectHook(async ({ attempt, quickDisconnect }) => {
+    const shouldRefreshSession = quickDisconnect || attempt >= 2;
+
+    if (shouldRefreshSession) {
       await registerBackendSession();
-      await syncStateToBackend();
       const params = await loadParams();
       socketClient?.updateAuth({
         sessionToken: params.session_token,
         licenseId: params.license_id,
         addonId: data.id,
       });
+    }
+
+    if (shouldRefreshSession || attempt === 1) {
+      const sync = await syncStateToBackend();
+      if (!sync.success && !shouldRefreshSession) {
+        await registerBackendSession();
+        const params = await loadParams();
+        socketClient?.updateAuth({
+          sessionToken: params.session_token,
+          licenseId: params.license_id,
+          addonId: data.id,
+        });
+        await syncStateToBackend();
+      }
     }
   });
 
