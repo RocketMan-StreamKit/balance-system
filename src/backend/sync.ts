@@ -1,4 +1,8 @@
-import { BALANCE_SOCKET_NAMESPACE, BALANCE_SOCKET_PATH } from '../constants';
+import {
+  BACKEND_ADDON_ID,
+  BALANCE_SOCKET_NAMESPACE,
+  BALANCE_SOCKET_PATH,
+} from '../constants';
 import type {
   BalanceSpendCommand,
   BalanceSyncPayload,
@@ -65,7 +69,7 @@ export const registerBackendSession = async () => {
   const url = await buildApiUrl('/register', params);
   const licenseAuth = resolveLicenseAuth();
   const body = {
-    addonId: data.id,
+    addonId: BACKEND_ADDON_ID,
     ...licenseAuth,
     streamer,
   };

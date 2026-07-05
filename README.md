@@ -39,7 +39,7 @@ In **developer mode**, choose API server in addon settings (`rocketman-streams.c
 | API server (dev only) | Manual backend host selection |
 | Viewer page URL | Auto-filled after backend registration |
 
-**Shop** items are configured in the application window (**Shop** tab). Pick a trigger already used in overlay, sounds, timer, hotkeys, or game rules, set price and localized name. Items appear on the viewer web page after backend sync.
+**Shop** items are configured automatically from overlay/sound balance trigger rules, or via backend sync.
 
 ## Viewer page
 

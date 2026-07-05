@@ -49,7 +49,7 @@ export const parseRegisterResponse = (url: string, rawResponse: string) => {
   if (trimmed.startsWith('<!DOCTYPE') || trimmed.startsWith('<html')) {
     console.error('[balance] register HTML response from', url, trimmed.slice(0, 200));
     const mapped = mapRegisterErrorCode('route_not_found');
-    throw new Error(mapped.en);
+    throw new Error(mapped[LANG.current] ?? mapped.en);
   }
 
   let parsed: RegisterErrorBody & {
@@ -68,7 +68,7 @@ export const parseRegisterResponse = (url: string, rawResponse: string) => {
   if (!parsed.success || !parsed.sessionToken) {
     console.error('[balance] register failed:', { url, body: parsed });
     const mapped = mapRegisterErrorCode(parsed.code);
-    throw new Error(parsed.message ?? mapped.en);
+    throw new Error(parsed.message ?? mapped[LANG.current] ?? mapped.en);
   }
 
   return parsed;

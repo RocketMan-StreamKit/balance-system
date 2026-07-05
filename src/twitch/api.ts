@@ -1,7 +1,12 @@
 import { TWITCH_ADDON_ID } from '../constants';
 import type { ViewerEntry } from '../types';
 import { convertToBalanceCurrency } from '../balance/currency';
-import { findViewer, loadParams, saveParams, upsertViewerEntry } from '../balance/store';
+import {
+  findViewer,
+  loadParams,
+  saveParams,
+  upsertViewerEntry,
+} from '../balance/store';
 
 type TwitchUser = {
   id: string;
@@ -70,7 +75,11 @@ export const parseTwitchHelixResponse = (
  */
 export const getBroadcasterProfile = async () => {
   const channel = await addons.request(TWITCH_ADDON_ID, 'getChannelId', {});
-  if (!channel.success || !channel.result || typeof channel.result !== 'object') {
+  if (
+    !channel.success ||
+    !channel.result ||
+    typeof channel.result !== 'object'
+  ) {
     const reason =
       'message' in channel && typeof channel.message === 'string'
         ? channel.message
@@ -99,9 +108,15 @@ export const getBroadcasterProfile = async () => {
   const helix = parseTwitchHelixResponse(response);
   const user = helix?.data?.[0];
 
-  const login = String(user?.login ?? meta.login ?? meta.username ?? '').toLowerCase();
+  const login = String(
+    user?.login ?? meta.login ?? meta.username ?? ''
+  ).toLowerCase();
   const displayName = String(
-    user?.display_name ?? meta.displayName ?? meta.login ?? meta.username ?? login
+    user?.display_name ??
+      meta.displayName ??
+      meta.login ??
+      meta.username ??
+      login
   );
 
   if (!login) {
@@ -143,6 +158,39 @@ export const resolveTwitchUserByLogin = async (
   return user;
 };
 
+const HELIX_USERS_BATCH_SIZE = 100;
+
+/**
+ * Fetches Twitch users by id via Helix (up to 100 ids per request).
+ * @param twitchIds Twitch user ids to resolve.
+ * @example const users = await fetchTwitchUsersByIds(['1', '2']);
+ */
+export const fetchTwitchUsersByIds = async (twitchIds: string[]) => {
+  const unique = [...new Set(twitchIds.map(id => id.trim()).filter(Boolean))];
+  const usersById = new Map<string, TwitchUser>();
+
+  for (
+    let offset = 0;
+    offset < unique.length;
+    offset += HELIX_USERS_BATCH_SIZE
+  ) {
+    const chunk = unique.slice(offset, offset + HELIX_USERS_BATCH_SIZE);
+    const query = chunk.map(id => `id=${encodeURIComponent(id)}`).join('&');
+    const response = await addons.request(TWITCH_ADDON_ID, 'apiGet', {
+      url: `https://api.twitch.tv/helix/users?${query}`,
+    });
+    const helix = parseTwitchHelixResponse(response);
+
+    for (const user of helix?.data ?? []) {
+      if (user?.id) {
+        usersById.set(user.id, user);
+      }
+    }
+  }
+
+  return usersById;
+};
+
 /**
  * Returns Twitch profile image URL for a viewer by Twitch user id.
  * @param twitchId Twitch user id.
@@ -175,11 +223,7 @@ export const creditDonationBalance = async (
   const converted = await convertToBalanceCurrency(amount, currencyCode);
   const twitchUser = await resolveTwitchUserByLogin(login);
   const params = await loadParams();
-  const existing = findViewer(
-    params.viewers,
-    login,
-    twitchUser?.id
-  );
+  const existing = findViewer(params.viewers, login, twitchUser?.id);
 
   const entry: ViewerEntry = {
     twitchId: twitchUser?.id ?? existing?.twitchId ?? '',
@@ -190,7 +234,10 @@ export const creditDonationBalance = async (
   };
 
   if (!entry.twitchId) {
-    console.warn('[balance] Skipping donation without resolvable Twitch id:', login);
+    console.warn(
+      '[balance] Skipping donation without resolvable Twitch id:',
+      login
+    );
     return null;
   }
 

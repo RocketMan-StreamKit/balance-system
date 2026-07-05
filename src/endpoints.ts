@@ -1,10 +1,12 @@
-import { ADDON_ID } from './constants';
-import { resolveBalanceCurrency } from './balance/currency';
+import { ADDON_ID, SUPPORTED_CURRENCIES } from './constants';
 import {
-  deleteViewerBalance,
-  setViewerBalance,
-} from './twitch/api';
-import { loadParams } from './balance/store';
+  convertToBalanceCurrency,
+  resolveBalanceCurrency,
+} from './balance/currency';
+import { importStreamKitLegacyViewers } from './balance/import-legacy';
+import { applyBulkViewerAction } from './balance/bulk-actions';
+import { deleteViewerBalance, setViewerBalance } from './twitch/api';
+import { findViewer, loadParams } from './balance/store';
 import { resyncBackend } from './backend/sync';
 import { creditViewerBalance } from './twitch/api';
 import { collectTriggerSourceOptions } from './triggers/sources';
@@ -23,11 +25,17 @@ export const registerHttpEndpoints = async () => {
   await network.endpoints.create('state', 'GET', 'onGetState');
   await network.endpoints.create('viewers', 'GET', 'onListViewers');
   await network.endpoints.create('viewers', 'POST', 'onSaveViewer');
-  await network.endpoints.create('viewers/delete', 'POST', 'onDeleteViewer');
+  await network.endpoints.create('viewers/import', 'POST', 'onImportViewers');
+  await network.endpoints.create('viewers/bulk', 'POST', 'onBulkViewers');
+  await network.endpoints.create('open-url', 'POST', 'onOpenUrl');
   await network.endpoints.create('shop', 'GET', 'onListShop');
   await network.endpoints.create('shop', 'POST', 'onSaveShopItem');
   await network.endpoints.create('shop/delete', 'POST', 'onDeleteShopItem');
-  await network.endpoints.create('trigger-sources', 'GET', 'onListTriggerSources');
+  await network.endpoints.create(
+    'trigger-sources',
+    'GET',
+    'onListTriggerSources'
+  );
 
   events.On('onGetState', async ({ query }) => {
     if (!assertToken(query.token)) {
@@ -36,11 +44,17 @@ export const registerHttpEndpoints = async () => {
 
     const params = await loadParams();
     const currencyCode = await resolveBalanceCurrency();
+    const appConfig = (await api.config.getConfig()) as {
+      themeScheme?: string;
+    } | null;
 
     return {
       success: true,
       addonId: ADDON_ID,
+      lang: LANG.current,
+      themeScheme: appConfig?.themeScheme ?? 'dark',
       currency: currencyCode,
+      currencies: SUPPORTED_CURRENCIES,
       viewerPageUrl: params.viewer_page_url,
       licenseId: params.license_id,
       viewerCount: params.viewers.length,
@@ -55,8 +69,7 @@ export const registerHttpEndpoints = async () => {
     const params = await loadParams();
     const search =
       typeof query.search === 'string' ? query.search.trim().toLowerCase() : '';
-    const sort =
-      typeof query.sort === 'string' ? query.sort : 'balance_desc';
+    const sort = typeof query.sort === 'string' ? query.sort : 'balance_desc';
 
     let viewers = [...params.viewers];
     if (search) {
@@ -88,6 +101,10 @@ export const registerHttpEndpoints = async () => {
         : undefined;
     const balance = Number(body?.balance);
     const mode = typeof body?.mode === 'string' ? body.mode : 'set';
+    const sourceCurrency =
+      typeof body?.sourceCurrency === 'string'
+        ? body.sourceCurrency.trim()
+        : '';
 
     if (!login && !twitchId) {
       return { success: false, message: 'login or twitchId required' };
@@ -96,9 +113,52 @@ export const registerHttpEndpoints = async () => {
       return { success: false, message: 'balance must be a number' };
     }
 
+    if (
+      (mode === 'add' || mode === 'subtract') &&
+      sourceCurrency &&
+      !SUPPORTED_CURRENCIES.includes(
+        sourceCurrency as (typeof SUPPORTED_CURRENCIES)[number]
+      )
+    ) {
+      return { success: false, message: 'Invalid source currency' };
+    }
+
+    if ((mode === 'add' || mode === 'subtract') && balance <= 0) {
+      return { success: false, message: 'amount must be positive' };
+    }
+
     let result;
-    if (mode === 'add') {
-      result = await creditViewerBalance({ login, twitchId, amount: balance });
+    if (mode === 'add' || mode === 'subtract') {
+      let amount = balance;
+      if (sourceCurrency) {
+        try {
+          amount = await convertToBalanceCurrency(
+            balance,
+            sourceCurrency as (typeof SUPPORTED_CURRENCIES)[number]
+          );
+        } catch (error) {
+          return {
+            success: false,
+            message:
+              error instanceof Error
+                ? error.message
+                : 'Currency conversion failed',
+          };
+        }
+      }
+
+      if (mode === 'subtract') {
+        const params = await loadParams();
+        const existing = findViewer(params.viewers, login, twitchId);
+        const nextBalance = Math.max(0, (existing?.balance ?? 0) - amount);
+        result = await setViewerBalance({
+          login,
+          twitchId,
+          balance: nextBalance,
+        });
+      } else {
+        result = await creditViewerBalance({ login, twitchId, amount });
+      }
     } else {
       result = await setViewerBalance({ login, twitchId, balance });
     }
@@ -108,6 +168,127 @@ export const registerHttpEndpoints = async () => {
     }
 
     return result;
+  });
+
+  events.On('onImportViewers', async ({ query, body }) => {
+    if (!assertToken(query.token)) {
+      return unauthorized();
+    }
+
+    const rawJson = typeof body?.json === 'string' ? body.json.trim() : '';
+    const sourceCurrency =
+      typeof body?.sourceCurrency === 'string'
+        ? body.sourceCurrency.trim()
+        : '';
+
+    if (!rawJson) {
+      return { success: false, message: 'json is required' };
+    }
+
+    if (
+      !SUPPORTED_CURRENCIES.includes(
+        sourceCurrency as (typeof SUPPORTED_CURRENCIES)[number]
+      )
+    ) {
+      return { success: false, message: 'Invalid source currency' };
+    }
+
+    try {
+      const result = await importStreamKitLegacyViewers(
+        rawJson,
+        sourceCurrency as (typeof SUPPORTED_CURRENCIES)[number]
+      );
+
+      if (result.success) {
+        await resyncBackend();
+      }
+
+      return result;
+    } catch (error) {
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Import failed',
+      };
+    }
+  });
+
+  events.On('onBulkViewers', async ({ query, body }) => {
+    if (!assertToken(query.token)) {
+      return unauthorized();
+    }
+
+    const action = typeof body?.action === 'string' ? body.action.trim() : '';
+    const targets = parseBulkTargets(body?.targets);
+
+    if (!targets.length) {
+      return { success: false, message: 'targets are required' };
+    }
+
+    if (
+      action !== 'delete' &&
+      action !== 'reset' &&
+      action !== 'add' &&
+      action !== 'subtract' &&
+      action !== 'merge'
+    ) {
+      return { success: false, message: 'Invalid bulk action' };
+    }
+
+    const sourceCurrency =
+      typeof body?.sourceCurrency === 'string'
+        ? body.sourceCurrency.trim()
+        : '';
+    const amount = body?.amount !== undefined ? Number(body.amount) : undefined;
+    const merge =
+      body?.merge && typeof body.merge === 'object'
+        ? {
+            twitchId:
+              typeof body.merge.twitchId === 'string'
+                ? body.merge.twitchId
+                : '',
+            login: typeof body.merge.login === 'string' ? body.merge.login : '',
+            displayName:
+              typeof body.merge.displayName === 'string'
+                ? body.merge.displayName
+                : '',
+            balance:
+              body.merge.balance !== undefined
+                ? Number(body.merge.balance)
+                : undefined,
+          }
+        : undefined;
+
+    const result = await applyBulkViewerAction({
+      action,
+      targets,
+      amount,
+      sourceCurrency: SUPPORTED_CURRENCIES.includes(
+        sourceCurrency as (typeof SUPPORTED_CURRENCIES)[number]
+      )
+        ? (sourceCurrency as (typeof SUPPORTED_CURRENCIES)[number])
+        : undefined,
+      merge,
+    });
+
+    if (result.success) {
+      await resyncBackend();
+    }
+
+    return result;
+  });
+
+  events.On('onOpenUrl', async ({ query, body }) => {
+    if (!assertToken(query.token)) {
+      return unauthorized();
+    }
+
+    const url = typeof body?.url === 'string' ? body.url.trim() : '';
+    if (!/^https:\/\/(www\.)?twitch\.tv\/[a-zA-Z0-9_]{1,25}\/?$/i.test(url)) {
+      return { success: false, message: 'Invalid Twitch profile URL' };
+    }
+
+    api.openUrl(url);
+    return { success: true };
   });
 
   events.On('onDeleteViewer', async ({ query, body }) => {
@@ -184,6 +365,38 @@ type ViewerRow = {
   balance: number;
 };
 
+const parseBulkTargets = (
+  raw: unknown
+): { twitchId: string; login?: string }[] => {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+
+  const targets: { twitchId: string; login?: string }[] = [];
+
+  for (const entry of raw) {
+    if (!entry || typeof entry !== 'object') {
+      continue;
+    }
+
+    const record = entry as Record<string, unknown>;
+    const twitchId =
+      typeof record.twitchId === 'string' ? record.twitchId.trim() : '';
+    const login = typeof record.login === 'string' ? record.login.trim() : '';
+
+    if (!twitchId && !login) {
+      continue;
+    }
+
+    targets.push({
+      twitchId,
+      ...(login ? { login } : {}),
+    });
+  }
+
+  return targets;
+};
+
 const compareViewers = (a: ViewerRow, b: ViewerRow, sort: string) => {
   switch (sort) {
     case 'balance_asc':
@@ -205,7 +418,8 @@ const parseShopItemBody = (body: unknown): BalanceShopItem | null => {
 
   const record = body as Record<string, unknown>;
   const price = Number(record.price);
-  const addonId = typeof record.addonId === 'string' ? record.addonId.trim() : '';
+  const addonId =
+    typeof record.addonId === 'string' ? record.addonId.trim() : '';
   const id =
     typeof record.id === 'string' && record.id.trim()
       ? record.id.trim()
@@ -216,7 +430,13 @@ const parseShopItemBody = (body: unknown): BalanceShopItem | null => {
       : 'default';
   const trigger = record.trigger;
 
-  if (!addonId || !Number.isFinite(price) || price < 0 || !trigger || typeof trigger !== 'object') {
+  if (
+    !addonId ||
+    !Number.isFinite(price) ||
+    price < 0 ||
+    !trigger ||
+    typeof trigger !== 'object'
+  ) {
     return null;
   }
 
@@ -246,7 +466,8 @@ const parseShopItemBody = (body: unknown): BalanceShopItem | null => {
     description,
     trigger: {
       type,
-      key: typeof triggerRecord.key === 'string' ? triggerRecord.key : undefined,
+      key:
+        typeof triggerRecord.key === 'string' ? triggerRecord.key : undefined,
       value:
         typeof triggerRecord.value === 'string' ||
         typeof triggerRecord.value === 'number' ||

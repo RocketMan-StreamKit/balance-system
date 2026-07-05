@@ -73,7 +73,7 @@ Registers a new addon session.
 
 ```json
 {
-  "addonId": "balance-system",
+  "addonId": "XXanderWP/streamkit-addon-balance-system",
   "accessToken": "<MD5 hex digest of device license key (license.keyMd5)>",
   "licenseId": "384",
   "streamer": {

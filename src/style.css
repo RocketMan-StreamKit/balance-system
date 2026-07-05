@@ -1,8 +1,16 @@
-.balance-app {
+.App.balance-app {
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  min-height: 100vh;
+  box-sizing: border-box;
   padding: 20px;
   max-width: 1100px;
   margin: 0 auto;
+  background: var(--bg);
   color: var(--text);
+  overflow: hidden;
 }
 
 .balance-header {
@@ -11,66 +19,57 @@
   gap: 16px;
   align-items: flex-start;
   margin-bottom: 16px;
+  flex-shrink: 0;
 }
 
 .balance-header h1 {
   margin: 0 0 8px;
-  font-size: 1.5rem;
+  font-size: var(--font-size-xl);
 }
 
 .balance-meta {
   margin: 0;
-  color: var(--text-secondary, #9aa0a6);
+  color: var(--text-muted);
   display: flex;
   gap: 12px;
 }
 
-.balance-tabs {
-  display: flex;
-  gap: 8px;
-  padding: 8px;
+.balance-panel-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-panel);
   margin-bottom: 16px;
 }
 
-.balance-tab {
-  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
-  background: transparent;
-  color: var(--text);
-  border-radius: 6px;
-  padding: 8px 14px;
-  cursor: pointer;
-}
-
-.balance-tab--active {
-  background: var(--bg-hover, rgba(255, 255, 255, 0.08));
-}
-
-.balance-panel--hidden {
-  display: none;
-}
-
 .balance-hint {
-  margin: 0;
-  flex: 1;
-  color: var(--text-secondary, #9aa0a6);
-}
-
-.balance-field-hint {
-  color: var(--text-secondary, #9aa0a6);
-  font-size: 0.85rem;
+  margin: 0 0 12px;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  line-height: 1.45;
 }
 
 .balance-toolbar {
   display: grid;
   grid-template-columns: 1fr auto auto;
   gap: 12px;
-  margin-bottom: 16px;
   padding: 12px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.balance-toolbar-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .balance-table {
+  flex: 1;
+  min-height: 0;
   padding: 0;
   overflow: auto;
+  margin-bottom: 0;
 }
 
 .balance-table table {
@@ -81,12 +80,72 @@
 .balance-table th,
 .balance-table td {
   padding: 10px 12px;
-  border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  border-bottom: 1px solid var(--border);
   text-align: left;
 }
 
+.balance-col-select {
+  width: 40px;
+  text-align: center;
+}
+
+.balance-col-select input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--btn-primary);
+}
+
+.balance-bulk-bar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin: 12px -20px -20px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-panel) 92%, var(--bg) 8%);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.balance-bulk-bar--hidden {
+  display: none;
+}
+
+.balance-bulk-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+#bulk-selected-label {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.balance-dialog-actions--wrap {
+  flex-wrap: wrap;
+}
+
+.balance-editor-adjust {
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+  padding-top: 12px;
+}
+
+.balance-panel--hidden {
+  display: none;
+}
+
+.balance-table tbody tr.balance-viewer-row {
+  cursor: pointer;
+}
+
 .balance-table tbody tr:hover {
-  background: var(--bg-hover, rgba(255, 255, 255, 0.04));
+  background: color-mix(in srgb, var(--bg-display) 70%, var(--bg-panel) 30%);
 }
 
 .balance-field {
@@ -105,7 +164,7 @@
   gap: 8px;
 }
 
-.balance-copy-row .input {
+.balance-copy-row input {
   flex: 1;
 }
 
@@ -114,24 +173,149 @@
   gap: 8px;
 }
 
-.balance-dialog {
-  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
-  border-radius: 8px;
-  padding: 16px;
-  background: var(--bg-elevated, #1e1e1e);
+.balance-app .primary-action {
+  min-width: 120px;
+  background: var(--btn-primary);
+  color: #f5f8ff;
+  border-color: color-mix(in srgb, var(--btn-primary) 70%, #243754 30%);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--btn-primary) 28%, transparent);
+}
+
+.balance-app .primary-action:hover {
+  background: color-mix(in srgb, var(--btn-primary) 94%, #1d2e47 6%);
+}
+
+.balance-app .secondary-action {
+  background: color-mix(in srgb, var(--bg-panel) 86%, var(--bg-display) 14%);
   color: var(--text);
-  min-width: 360px;
+  border-color: var(--border);
+}
+
+.balance-dialog {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0;
+  margin: auto;
+  background: transparent;
+  color: var(--text);
+  width: min(520px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 32px);
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .balance-dialog::backdrop {
   background: rgba(0, 0, 0, 0.45);
 }
 
+.balance-dialog-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 16px;
+  background: var(--bg-panel);
+  border-radius: var(--radius-md);
+  box-sizing: border-box;
+  max-height: calc(100vh - 32px);
+  overflow: hidden;
+}
+
+.balance-dialog--import {
+  width: min(560px, calc(100vw - 32px));
+}
+
+.balance-dialog-form--import .balance-hint {
+  flex-shrink: 0;
+}
+
+.balance-dialog-form--import .balance-field--grow {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.balance-dialog-form--import .balance-field--grow textarea {
+  flex: 1;
+  min-height: 140px;
+  max-height: min(40vh, 320px);
+}
+
+.balance-dialog :is(button, input, select, textarea) {
+  font: inherit;
+  color: var(--text);
+  box-sizing: border-box;
+}
+
+.balance-dialog input,
+.balance-dialog select,
+.balance-dialog textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-display);
+  outline: none;
+}
+
+.balance-dialog input,
+.balance-dialog select {
+  height: 34px;
+  padding: 0 12px;
+  font-size: var(--font-size-md);
+}
+
+.balance-dialog textarea {
+  min-height: 84px;
+  padding: 8px 10px;
+  font-size: var(--font-size-md);
+  resize: vertical;
+  line-height: 1.4;
+}
+
+.balance-dialog select {
+  cursor: pointer;
+}
+
+.balance-dialog button {
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--bg-panel) 84%, var(--bg-display) 16%);
+  cursor: pointer;
+}
+
+.balance-dialog .primary-action {
+  min-width: 120px;
+  background: var(--btn-primary);
+  color: #f5f8ff;
+  border-color: color-mix(in srgb, var(--btn-primary) 70%, #243754 30%);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--btn-primary) 28%, transparent);
+}
+
+.balance-dialog .primary-action:hover {
+  background: color-mix(in srgb, var(--btn-primary) 94%, #1d2e47 6%);
+}
+
+.balance-dialog .secondary-action {
+  background: color-mix(in srgb, var(--bg-panel) 86%, var(--bg-display) 14%);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.balance-dialog h2 {
+  margin: 0 0 12px;
+  font-size: var(--font-size-lg);
+  flex-shrink: 0;
+}
+
 .balance-dialog-actions {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  margin-top: 8px;
+  margin-top: 4px;
+  flex-shrink: 0;
 }
 
 @media (max-width: 800px) {

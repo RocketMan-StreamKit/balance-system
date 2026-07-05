@@ -43,10 +43,20 @@ const strings: UiStrings = {
     ru: 'Логин Twitch',
     uk: 'Логін Twitch',
   },
+  columnLogin: {
+    en: 'Login',
+    ru: 'Логин',
+    uk: 'Логін',
+  },
   balance: {
     en: 'Balance',
     ru: 'Баланс',
     uk: 'Баланс',
+  },
+  name: {
+    en: 'Name',
+    ru: 'Имя',
+    uk: "Ім'я",
   },
   save: {
     en: 'Save',
@@ -103,75 +113,135 @@ const strings: UiStrings = {
     ru: 'Ошибка',
     uk: 'Помилка',
   },
-  tabViewers: {
-    en: 'Viewers',
-    ru: 'Зрители',
-    uk: 'Глядачі',
+  viewerCount: {
+    en: '{count} viewers',
+    ru: '{count} зрителей',
+    uk: '{count} глядачів',
   },
-  tabShop: {
-    en: 'Shop',
-    ru: 'Магазин',
-    uk: 'Магазин',
+  importStreamKit: {
+    en: 'Import from StreamKit',
+    ru: 'Импорт из StreamKit',
+    uk: 'Імпорт з StreamKit',
   },
-  addShopItem: {
-    en: 'Add shop item',
-    ru: 'Добавить товар',
-    uk: 'Додати товар',
+  importTitle: {
+    en: 'Import from StreamKit',
+    ru: 'Импорт из StreamKit',
+    uk: 'Імпорт з StreamKit',
   },
-  shopEmpty: {
-    en: 'No shop items yet. Add triggers from overlays, sounds, or timers.',
-    ru: 'Товаров пока нет. Добавьте триггеры из оверлеев, звуков или таймеров.',
-    uk: 'Товарів поки немає. Додайте тригери з оверлеїв, звуків або таймерів.',
+  importDescription: {
+    en: 'Paste the contents of balanceUsers.json from the legacy StreamKit application (Windows only). File path: %APPDATA%\\rocketman-application\\storageData\\balanceUsers.json. Amounts will be converted from the selected currency into your current balance currency.',
+    ru: 'Вставьте содержимое файла balanceUsers.json из старого приложения StreamKit (только Windows). Путь к файлу: %APPDATA%\\rocketman-application\\storageData\\balanceUsers.json. Суммы будут сконвертированы из выбранной валюты в текущую валюту баланса.',
+    uk: 'Вставте вміст файлу balanceUsers.json зі старого застосунку StreamKit (лише Windows). Шлях до файлу: %APPDATA%\\rocketman-application\\storageData\\balanceUsers.json. Суми буде сконвертовано з обраної валюти в поточну валюту балансу.',
   },
-  shopTrigger: {
-    en: 'Trigger source',
-    ru: 'Источник триггера',
-    uk: 'Джерело тригера',
+  importCurrency: {
+    en: 'Source currency',
+    ru: 'Исходная валюта',
+    uk: 'Вихідна валюта',
   },
-  shopPrice: {
-    en: 'Price',
-    ru: 'Цена',
-    uk: 'Ціна',
+  importJson: {
+    en: 'JSON data',
+    ru: 'JSON-данные',
+    uk: 'JSON-дані',
   },
-  shopTriggerValue: {
-    en: 'Trigger code',
-    ru: 'Код триггера',
-    uk: 'Код тригера',
+  importSubmit: {
+    en: 'Import',
+    ru: 'Импортировать',
+    uk: 'Імпортувати',
   },
-  shopTriggerValueHint: {
-    en: 'Use this number in overlay/sound/timer trigger settings.',
-    ru: 'Укажите это число в настройках триггера оверлея/звука/таймера.',
-    uk: 'Вкажіть це число в налаштуваннях тригера оверлею/звуку/таймера.',
+  importSuccess: {
+    en: 'Imported {imported} viewers ({skipped} skipped)',
+    ru: 'Импортировано {imported} зрителей ({skipped} пропущено)',
+    uk: 'Імпортовано {imported} глядачів ({skipped} пропущено)',
   },
-  shopName: {
-    en: 'Name (EN)',
-    ru: 'Название (EN)',
-    uk: 'Назва (EN)',
+  bulkSelected: {
+    en: 'Selected: {count}',
+    ru: 'Выбрано: {count}',
+    uk: 'Обрано: {count}',
   },
-  shopNameRu: {
-    en: 'Name (RU)',
-    ru: 'Название (RU)',
-    uk: 'Назва (RU)',
+  bulkDelete: {
+    en: 'Delete',
+    ru: 'Удалить',
+    uk: 'Видалити',
   },
-  shopNameUk: {
-    en: 'Name (UK)',
-    ru: 'Название (UK)',
-    uk: 'Назва (UK)',
+  bulkReset: {
+    en: 'Reset balance',
+    ru: 'Обнулить баланс',
+    uk: 'Обнулити баланс',
   },
-  shopDescription: {
-    en: 'Description (EN)',
-    ru: 'Описание (EN)',
-    uk: 'Опис (EN)',
+  bulkAdd: {
+    en: 'Add balance',
+    ru: 'Добавить баланс',
+    uk: 'Додати баланс',
   },
-  shopSystems: {
-    en: 'Systems',
-    ru: 'Системы',
-    uk: 'Системи',
+  bulkSubtract: {
+    en: 'Subtract balance',
+    ru: 'Отнять баланс',
+    uk: 'Відняти баланс',
   },
-  shopHint: {
-    en: 'Pick a trigger already used in overlay, sounds, timer, hotkeys, or game rules.',
-    ru: 'Выберите триггер, уже используемый в оверлее, звуках, таймере, хоткеях или игре.',
-    uk: 'Оберіть тригер, який уже використовується в оверлеї, звуках, таймері, хоткеях або грі.',
+  bulkMerge: {
+    en: 'Merge',
+    ru: 'Объединить',
+    uk: "Об'єднати",
+  },
+  bulkDeleteConfirm: {
+    en: 'Delete {count} selected viewers?',
+    ru: 'Удалить {count} выбранных зрителей?',
+    uk: 'Видалити {count} обраних глядачів?',
+  },
+  bulkResetConfirm: {
+    en: 'Reset balance to 0 for {count} selected viewers?',
+    ru: 'Обнулить баланс у {count} выбранных зрителей?',
+    uk: 'Обнулити баланс у {count} обраних глядачів?',
+  },
+  bulkAmountTitleAdd: {
+    en: 'Add balance',
+    ru: 'Добавить баланс',
+    uk: 'Додати баланс',
+  },
+  bulkAmountTitleSubtract: {
+    en: 'Subtract balance',
+    ru: 'Отнять баланс',
+    uk: 'Відняти баланс',
+  },
+  bulkAmountLabel: {
+    en: 'Amount',
+    ru: 'Сумма',
+    uk: 'Сума',
+  },
+  bulkAmountCurrency: {
+    en: 'Currency',
+    ru: 'Валюта',
+    uk: 'Валюта',
+  },
+  bulkAmountApply: {
+    en: 'Apply',
+    ru: 'Применить',
+    uk: 'Застосувати',
+  },
+  bulkMergeTitle: {
+    en: 'Merge viewers',
+    ru: 'Объединение зрителей',
+    uk: "Об'єднання глядачів",
+  },
+  bulkMergeHint: {
+    en: 'Balances of selected viewers are summed by default. Other fields use the first selected viewer.',
+    ru: 'Балансы выбранных зрителей суммируются по умолчанию. Остальные поля берутся от первого выбранного.',
+    uk: 'Баланси обраних глядачів за замовчуванням підсумовуються. Інші поля — від першого обраного.',
+  },
+  twitchId: {
+    en: 'Twitch ID',
+    ru: 'Twitch ID',
+    uk: 'Twitch ID',
+  },
+  displayName: {
+    en: 'Display name',
+    ru: 'Отображаемое имя',
+    uk: "Відображуване ім'я",
+  },
+  bulkMergeApply: {
+    en: 'Merge',
+    ru: 'Объединить',
+    uk: "Об'єднати",
   },
 };
 
@@ -179,6 +249,18 @@ const strings: UiStrings = {
  * Returns UI string for the active language with English fallback.
  * @param key String key.
  * @param lang Active UI language.
+ * @param vars Optional `{name}` placeholders.
  */
-export const t = (key: keyof typeof strings, lang: UiLang) =>
-  strings[key][lang] ?? strings[key].en;
+export const t = (
+  key: keyof typeof strings,
+  lang: UiLang,
+  vars?: Record<string, string | number>
+) => {
+  let value = strings[key][lang] ?? strings[key].en;
+  if (vars) {
+    for (const [name, replacement] of Object.entries(vars)) {
+      value = value.replace(`{${name}}`, String(replacement));
+    }
+  }
+  return value;
+};
