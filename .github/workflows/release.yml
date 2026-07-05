@@ -70,33 +70,20 @@ jobs:
         if: steps.check.outputs.should_release == 'true'
         run: npm run build
 
-      - name: Collect release assets
-        if: steps.check.outputs.should_release == 'true'
-        run: node scripts/collect-manifest-assets.mjs release
-
       - name: Package addon
         if: steps.check.outputs.should_release == 'true'
         run: |
-          mkdir -p release-assets
-          cp manifest.json release-assets/manifest.json
-          ICON=$(node -p "require('./manifest.json').icon || ''")
-          if [ -n "$ICON" ] && [ -f "release/$ICON" ]; then
-            cp "release/$ICON" "release-assets/$ICON"
-          elif [ -n "$ICON" ] && [ -f "$ICON" ]; then
-            cp "$ICON" "release-assets/$ICON"
-          fi
-          cd release
-          zip -r ../release-assets/main.zip .
-          cd ..
+          cd dist
+          zip -r ../main.zip .
 
       - name: List release files
         if: steps.check.outputs.should_release == 'true'
         id: files
         run: |
-          FILES="release-assets/main.zip"$'\n'"release-assets/manifest.json"
+          FILES="main.zip"$'\n'"dist/manifest.json"
           ICON=$(node -p "require('./manifest.json').icon || ''")
-          if [ -n "$ICON" ] && [ -f "release-assets/$ICON" ]; then
-            FILES="${FILES}"$'\n'"release-assets/${ICON}"
+          if [ -n "$ICON" ] && [ -f "dist/$ICON" ]; then
+            FILES="${FILES}"$'\n'"dist/${ICON}"
           fi
           {
             echo "list<<EOF"
