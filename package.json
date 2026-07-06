@@ -1,6 +1,6 @@
 {
   "name": "xxanderwp-streamkit-addon-balance-system",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "private": true,
   "description": "Viewer balance system for StreamKit+ (Twitch).",
   "scripts": {
