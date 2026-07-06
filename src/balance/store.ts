@@ -22,7 +22,8 @@ export const parseViewers = (raw: unknown): ViewerEntry[] => {
 };
 
 /** Serializes viewers for params storage. */
-export const serializeViewers = (viewers: ViewerEntry[]) => JSON.stringify(viewers);
+export const serializeViewers = (viewers: ViewerEntry[]) =>
+  JSON.stringify(viewers);
 
 type SaveParamsOptions = {
   /** When true, skips debounced server backup upload. */
@@ -165,7 +166,9 @@ export const upsertViewerEntry = (
       )
     : [...viewers, normalizedEntry];
 
-  return next.sort((a, b) => b.balance - a.balance || a.login.localeCompare(b.login));
+  return next.sort(
+    (a, b) => b.balance - a.balance || a.login.localeCompare(b.login)
+  );
 };
 
 /**
