@@ -1,4 +1,5 @@
 import { ADDON_ID, SPEND_MESSAGE_MAX_LENGTH } from '../constants';
+import type { BalanceSpendSource } from '../types';
 
 const BALANCE_PLATFORM_NAME = {
   en: 'Viewer balance system',
@@ -41,15 +42,37 @@ export const normalizeSpendMessage = (
   return trimmed;
 };
 
+const SPEND_SOURCE_LABELS: Record<
+  BalanceSpendSource,
+  { en: string; ru: string; uk: string }
+> = {
+  website: {
+    en: 'Site activation',
+    ru: 'Активация через сайт',
+    uk: 'Активація через сайт',
+  },
+  twitch_extension: {
+    en: 'Twitch extension activation',
+    ru: 'Активация через расширение Twitch',
+    uk: 'Активація через розширення Twitch',
+  },
+};
+
 /**
- * Localized dashboard message for a viewer site spend (amount is passed separately).
+ * Localized dashboard message for a viewer balance spend (amount is passed separately).
+ * @param source Spend origin from the backend socket command.
  * @param message Optional viewer message appended after a colon.
  */
-export const buildSiteSpendMessage = (message?: string) => {
+export const buildSiteSpendMessage = (
+  source: BalanceSpendSource = 'website',
+  message?: string
+) => {
+  const label = SPEND_SOURCE_LABELS[source] ?? SPEND_SOURCE_LABELS.website;
   const suffix = message ? `: ${message}` : '';
+
   return {
-    en: `Site activation${suffix}`,
-    ru: `Активация через сайт${suffix}`,
-    uk: `Активація через сайт${suffix}`,
+    en: `${label.en}${suffix}`,
+    ru: `${label.ru}${suffix}`,
+    uk: `${label.uk}${suffix}`,
   };
 };

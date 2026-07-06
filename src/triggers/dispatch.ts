@@ -1,5 +1,9 @@
 import { ADDON_ID } from '../constants';
-import type { BalanceShopItem, BalanceSpendCommand } from '../types';
+import type {
+  BalanceShopItem,
+  BalanceSpendCommand,
+  BalanceSpendSource,
+} from '../types';
 import {
   buildSiteSpendMessage,
   normalizeSpendMessage,
@@ -13,6 +17,13 @@ import {
 } from '../balance/store';
 import { resolveTwitchAvatarById } from '../twitch/api';
 import { buildSpendTriggers } from './registry';
+
+/**
+ * Resolves spend source from the backend socket payload.
+ * @param raw Source field from `balance:spend`.
+ */
+const resolveSpendSource = (raw: unknown): BalanceSpendSource =>
+  raw === 'twitch_extension' ? 'twitch_extension' : 'website';
 
 /**
  * Executes a spend command from the viewer web page (via backend socket).
@@ -53,6 +64,7 @@ export const executeSpendCommand = async (command: BalanceSpendCommand) => {
     command.message,
     params.allow_spend_message
   );
+  const spendSource = resolveSpendSource(command.source);
 
   await dashboard.addRecord(
     {
@@ -60,7 +72,7 @@ export const executeSpendCommand = async (command: BalanceSpendCommand) => {
       type: 'custom',
       platform: ADDON_ID,
       amount: [item.price, String(currencyCode)],
-      message: buildSiteSpendMessage(spendMessage),
+      message: buildSiteSpendMessage(spendSource, spendMessage),
       from: viewer.twitchId,
     },
     {

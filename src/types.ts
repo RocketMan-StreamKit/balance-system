@@ -115,12 +115,17 @@ export type BalanceSyncSoundsEntry = {
   triggers: BalanceSyncTriggerEntry[];
 };
 
+/** Where the viewer initiated a balance spend. */
+export type BalanceSpendSource = 'website' | 'twitch_extension';
+
 /** Spend command from backend socket. */
 export type BalanceSpendCommand = {
   requestId: string;
   viewerTwitchId: string;
   viewerLogin?: string;
   itemId: string;
+  /** Spend origin: viewer page or Twitch extension. */
+  source?: BalanceSpendSource;
   /** Optional viewer message when `allow_spend_message` is enabled. */
   message?: string;
 };
