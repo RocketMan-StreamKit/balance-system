@@ -8,6 +8,7 @@ import {
 } from '../triggers/registry';
 import { syncShopFromBalanceRules } from '../triggers/sync-from-applied';
 import { resolveBalanceCurrency } from './currency';
+import { roundBalance } from './round';
 import { loadParams, saveParams } from './store';
 
 type AppTriggerRule = {
@@ -76,12 +77,6 @@ const isShopPriceTrigger = (trigger: {
   Number(trigger.value) > 0;
 
 /**
- * Rounds a monetary amount to two decimal places.
- * @param amount Numeric amount.
- */
-const roundMoney = (amount: number) => Math.round(amount * 100) / 100;
-
-/**
  * Converts a numeric amount between two currency codes.
  * @param amount Value in the source currency.
  * @param from Source currency code.
@@ -93,7 +88,7 @@ const convertAmount = async (
   to: string
 ): Promise<number> => {
   if (from === to) {
-    return roundMoney(amount);
+    return roundBalance(amount);
   }
 
   const converted = await currency.convert(
@@ -105,7 +100,7 @@ const convertAmount = async (
     throw new Error(converted.message ?? 'Currency conversion failed');
   }
 
-  return roundMoney(converted.amount);
+  return roundBalance(converted.amount);
 };
 
 /**

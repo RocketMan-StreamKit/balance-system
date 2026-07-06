@@ -1,4 +1,12 @@
 import type { BalanceAddonParams, ViewerEntry } from '../types';
+import { roundBalance } from './round';
+
+/** Normalizes viewer balances to two decimal places. */
+const normalizeViewerBalances = (viewers: ViewerEntry[]) =>
+  viewers.map(viewer => ({
+    ...viewer,
+    balance: roundBalance(viewer.balance),
+  }));
 
 /** Parses viewers from params JSON storage. */
 export const parseViewers = (raw: unknown): ViewerEntry[] => {
@@ -7,7 +15,7 @@ export const parseViewers = (raw: unknown): ViewerEntry[] => {
   }
   try {
     const parsed = JSON.parse(raw) as ViewerEntry[];
-    return Array.isArray(parsed) ? parsed : [];
+    return Array.isArray(parsed) ? normalizeViewerBalances(parsed) : [];
   } catch {
     return [];
   }
@@ -70,7 +78,9 @@ export const saveParams = async (
   const payload: Record<string, unknown> = { ...next };
 
   if (patch.viewers !== undefined) {
-    payload.viewers_json = serializeViewers(patch.viewers);
+    payload.viewers_json = serializeViewers(
+      normalizeViewerBalances(patch.viewers)
+    );
     delete payload.viewers;
   }
   if (patch.categories !== undefined) {
@@ -89,7 +99,7 @@ export const saveParams = async (
   await api.config.updateParams(payload);
 
   if (patch.viewers !== undefined && !options?.skipBackup) {
-    onViewersSaved?.(patch.viewers);
+    onViewersSaved?.(normalizeViewerBalances(patch.viewers));
   }
 
   return loadParams();
@@ -142,13 +152,18 @@ export const upsertViewerEntry = (
   entry: ViewerEntry
 ): ViewerEntry[] => {
   const existing = findViewer(viewers, entry.login, entry.twitchId);
+  const normalizedEntry = {
+    ...entry,
+    balance: roundBalance(entry.balance),
+    updatedAt: Date.now(),
+  };
   const next = existing
     ? viewers.map(item =>
         item.twitchId === existing.twitchId || item.login === existing.login
-          ? { ...existing, ...entry, updatedAt: Date.now() }
+          ? { ...existing, ...normalizedEntry }
           : item
       )
-    : [...viewers, { ...entry, updatedAt: Date.now() }];
+    : [...viewers, normalizedEntry];
 
   return next.sort((a, b) => b.balance - a.balance || a.login.localeCompare(b.login));
 };

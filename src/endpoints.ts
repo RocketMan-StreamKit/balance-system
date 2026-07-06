@@ -29,6 +29,11 @@ export const registerHttpEndpoints = async () => {
   await network.endpoints.create('viewers/import', 'POST', 'onImportViewers');
   await network.endpoints.create('viewers/bulk', 'POST', 'onBulkViewers');
   await network.endpoints.create('open-url', 'POST', 'onOpenUrl');
+  await network.endpoints.create(
+    'open-viewer-page',
+    'POST',
+    'onOpenViewerPage'
+  );
   await network.endpoints.create('shop', 'GET', 'onListShop');
   await network.endpoints.create('shop', 'POST', 'onSaveShopItem');
   await network.endpoints.create('shop/delete', 'POST', 'onDeleteShopItem');
@@ -287,6 +292,21 @@ export const registerHttpEndpoints = async () => {
     const url = typeof body?.url === 'string' ? body.url.trim() : '';
     if (!/^https:\/\/(www\.)?twitch\.tv\/[a-zA-Z0-9_]{1,25}\/?$/i.test(url)) {
       return { success: false, message: 'Invalid Twitch profile URL' };
+    }
+
+    api.openUrl(url);
+    return { success: true };
+  });
+
+  events.On('onOpenViewerPage', async ({ query }) => {
+    if (!assertToken(query.token)) {
+      return unauthorized();
+    }
+
+    const params = await loadParams();
+    const url = params.viewer_page_url?.trim() ?? '';
+    if (!/^https:\/\//i.test(url)) {
+      return { success: false, message: 'Viewer page URL is not available' };
     }
 
     api.openUrl(url);

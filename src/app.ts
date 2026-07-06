@@ -32,6 +32,7 @@ const state: AppState = {
 const selectedIds = new Set<string>();
 let editingViewer: ViewerRow | null = null;
 let bulkAmountMode: BulkAmountMode = 'add';
+let copyFeedbackTimer: ReturnType<typeof setTimeout> | null = null;
 
 const el = {
   title: document.getElementById('title'),
@@ -40,6 +41,7 @@ const el = {
   viewerPageLabel: document.getElementById('viewer-page-label'),
   viewerPageUrl: document.getElementById('viewer-page-url') as HTMLInputElement,
   copyPageUrl: document.getElementById('copy-page-url'),
+  openPageUrl: document.getElementById('open-page-url'),
   search: document.getElementById('search') as HTMLInputElement,
   sort: document.getElementById('sort') as HTMLSelectElement,
   addViewer: document.getElementById('add-viewer'),
@@ -171,6 +173,40 @@ const openTwitchProfile = async (login: string) => {
   }
 };
 
+/** Opens the viewer page URL in the system browser. */
+const openViewerPage = async () => {
+  if (!state.viewerPageUrl) {
+    return;
+  }
+
+  const result = await apiFetch('open-viewer-page', { method: 'POST' });
+  if (!result.success) {
+    alert(result.message ?? t('error', lang));
+  }
+};
+
+/** Shows temporary feedback on the copy-link button. */
+const showCopyFeedback = () => {
+  if (!el.copyPageUrl) {
+    return;
+  }
+
+  if (copyFeedbackTimer) {
+    clearTimeout(copyFeedbackTimer);
+  }
+
+  el.copyPageUrl.textContent = t('copied', lang);
+  el.copyPageUrl.classList.add('secondary-action--copied');
+
+  copyFeedbackTimer = setTimeout(() => {
+    copyFeedbackTimer = null;
+    if (el.copyPageUrl) {
+      el.copyPageUrl.textContent = t('copy', lang);
+      el.copyPageUrl.classList.remove('secondary-action--copied');
+    }
+  }, 2000);
+};
+
 /**
  * Applies app theme from settings to the document root.
  * @param themeScheme Theme scheme from app config.
@@ -278,7 +314,14 @@ const applyLocale = () => {
   if (el.addViewer) el.addViewer.textContent = t('addViewer', lang);
   if (el.importStreamKit)
     el.importStreamKit.textContent = t('importStreamKit', lang);
-  if (el.copyPageUrl) el.copyPageUrl.textContent = t('copy', lang);
+  if (el.copyPageUrl && !copyFeedbackTimer) {
+    el.copyPageUrl.textContent = t('copy', lang);
+  }
+  if (el.openPageUrl) {
+    const openLabel = t('openInBrowser', lang);
+    el.openPageUrl.setAttribute('aria-label', openLabel);
+    el.openPageUrl.setAttribute('title', openLabel);
+  }
   if (el.viewerPageLabel)
     el.viewerPageLabel.textContent = t('viewerPage', lang);
   if (el.colLogin) el.colLogin.textContent = t('columnLogin', lang);
@@ -618,7 +661,7 @@ const openImportDialog = () => {
 /** Saves viewer from dialog form. */
 const saveViewer = async () => {
   const login = el.editorLogin?.value.trim() ?? '';
-  const balance = Number(el.editorBalance?.value);
+  const balance = Math.round(Number(el.editorBalance?.value) * 100) / 100;
   if (!login || !Number.isFinite(balance)) {
     return;
   }
@@ -946,6 +989,10 @@ const bindEvents = () => {
       el.viewerPageUrl?.select();
       document.execCommand('copy');
     }
+    showCopyFeedback();
+  });
+  el.openPageUrl?.addEventListener('click', () => {
+    void openViewerPage();
   });
   window.addEventListener('focus', () => {
     void refreshAppData();

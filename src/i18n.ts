@@ -78,6 +78,16 @@ const strings: UiStrings = {
     ru: 'Копировать',
     uk: 'Копіювати',
   },
+  copied: {
+    en: 'Copied!',
+    ru: 'Скопировано!',
+    uk: 'Скопійовано!',
+  },
+  openInBrowser: {
+    en: 'Open in browser',
+    ru: 'Открыть в браузере',
+    uk: 'Відкрити в браузері',
+  },
   loading: {
     en: 'Loading…',
     ru: 'Загрузка…',

@@ -168,6 +168,19 @@
   flex: 1;
 }
 
+.balance-copy-row .secondary-action--copied {
+  color: #1f8f4a;
+  border-color: color-mix(in srgb, #1f8f4a 45%, var(--border));
+  background: color-mix(in srgb, #1f8f4a 12%, var(--bg-panel));
+}
+
+.balance-icon-action {
+  min-width: 40px;
+  padding-inline: 10px;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
 .balance-row-actions {
   display: flex;
   gap: 8px;

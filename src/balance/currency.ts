@@ -1,4 +1,5 @@
 import type { SupportedCurrency } from '../constants';
+import { roundBalance } from './round';
 import { loadParams } from './store';
 
 /**
@@ -26,7 +27,7 @@ export const convertToBalanceCurrency = async (
 ) => {
   const target = await resolveBalanceCurrency();
   if (fromCurrency === target) {
-    return amount;
+    return roundBalance(amount);
   }
 
   const converted = await currency.convert(
@@ -38,7 +39,7 @@ export const convertToBalanceCurrency = async (
     throw new Error(converted.message ?? 'Currency conversion failed');
   }
 
-  return converted.amount;
+  return roundBalance(converted.amount);
 };
 
 /**
