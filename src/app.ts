@@ -770,8 +770,21 @@ const submitBulkMerge = async () => {
   }
 };
 
-/** Polls app locale/theme from worker and refreshes UI when changed. */
-const refreshAppLocale = async () => {
+/** Returns true when a modal dialog is open and polling should pause. */
+const isDialogOpen = () =>
+  Boolean(
+    el.editorDialog?.open ||
+      el.importDialog?.open ||
+      el.bulkAmountDialog?.open ||
+      el.bulkMergeDialog?.open
+  );
+
+/** Polls worker state and viewer list, refreshing UI when data changes. */
+const refreshAppData = async () => {
+  if (isDialogOpen()) {
+    return;
+  }
+
   try {
     const meta = await apiFetch('state');
     if (!meta.success) {
@@ -784,13 +797,65 @@ const refreshAppLocale = async () => {
         : lang;
     const themeScheme =
       typeof meta.themeScheme === 'string' ? meta.themeScheme : 'dark';
+    const nextCurrency =
+      typeof meta.currency === 'string' ? meta.currency : state.currency;
+    const nextViewerPageUrl =
+      typeof meta.viewerPageUrl === 'string'
+        ? meta.viewerPageUrl
+        : state.viewerPageUrl;
 
     const langChanged = nextLang !== lang;
+    const currencyChanged = nextCurrency !== state.currency;
+    const viewerPageChanged = nextViewerPageUrl !== state.viewerPageUrl;
+
     lang = nextLang;
     applyTheme(themeScheme);
 
     if (langChanged) {
       applyLocale();
+    }
+
+    if (currencyChanged) {
+      state.currency = nextCurrency;
+      if (el.currencyLabel) {
+        el.currencyLabel.textContent = `${t('currency', lang)}: ${state.currency}`;
+      }
+      fillCurrencySelect(el.importCurrency, state.currencies);
+      fillCurrencySelect(el.bulkAmountCurrency, state.currencies);
+      fillCurrencySelect(el.editorAmountCurrency, state.currencies);
+    }
+
+    if (viewerPageChanged) {
+      state.viewerPageUrl = nextViewerPageUrl;
+      if (el.viewerPageUrl) {
+        el.viewerPageUrl.value = state.viewerPageUrl;
+      }
+    }
+
+    const search = el.search?.value.trim() ?? '';
+    const sort = el.sort?.value ?? 'balance_desc';
+    const query = new URLSearchParams({ search, sort });
+    const viewersResult = await apiFetch(`viewers?${query.toString()}`);
+
+    if (viewersResult.success) {
+      const nextViewers = viewersResult.viewers ?? [];
+      const viewersChanged =
+        JSON.stringify(state.viewers) !== JSON.stringify(nextViewers);
+
+      if (viewersChanged) {
+        state.viewers = nextViewers;
+
+        for (const id of [...selectedIds]) {
+          if (!state.viewers.some(viewer => viewer.twitchId === id)) {
+            selectedIds.delete(id);
+          }
+        }
+
+        renderViewers();
+      } else if (currencyChanged) {
+        renderViewers();
+      }
+    } else if (langChanged || currencyChanged) {
       renderViewers();
     }
   } catch {
@@ -883,10 +948,10 @@ const bindEvents = () => {
     }
   });
   window.addEventListener('focus', () => {
-    void refreshAppLocale();
+    void refreshAppData();
   });
   window.setInterval(() => {
-    void refreshAppLocale();
+    void refreshAppData();
   }, 3000);
 };
 
