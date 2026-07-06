@@ -2,15 +2,27 @@ import { buildWebSocketConnectUrl } from './urls';
 
 type SocketHandler = (event: string, data: unknown) => void | Promise<void>;
 
+/** Why the socket client is scheduling a reconnect. */
+export type BalanceSocketReconnectReason =
+  | 'transport'
+  | 'namespace'
+  | 'connect_error'
+  | 'auth_rejected';
+
 /** Context passed to the reconnect hook before opening a new socket. */
 export type BalanceSocketReconnectContext = {
   /** 1-based reconnect attempt since the last stable connection. */
   attempt: number;
   /** Previous namespace session ended within a few seconds of connect. */
   quickDisconnect: boolean;
+  /** Disconnect / error that triggered this reconnect attempt. */
+  reason: BalanceSocketReconnectReason;
 };
 
-type ReconnectHook = (context: BalanceSocketReconnectContext) => void | Promise<void>;
+type ReconnectHook = (
+  context: BalanceSocketReconnectContext
+) => void | Promise<void>;
+type NamespaceConnectedHook = () => void | Promise<void>;
 
 type AddonWebSocket = {
   On: (
@@ -56,12 +68,15 @@ export class BalanceSocketClient {
   private readonly socketPath: string;
   private readonly hostBase: string;
   private onReconnect: ReconnectHook | null = null;
+  private onNamespaceConnected: NamespaceConnectedHook | null = null;
   private intentionalClose = false;
   private pingInterval = 25_000;
   private lastPacketAt = 0;
   private reconnectAttempt = 0;
   private lastNamespaceConnectedAt = 0;
   private pendingNamespaceClose = false;
+  private pendingAuthRejected = false;
+  private lastReconnectReason: BalanceSocketReconnectReason = 'transport';
   private stableConnectionTimer: ReturnType<typeof setTimeout> | null = null;
   private static readonly RECONNECT_BASE_MS = 3_000;
   private static readonly RECONNECT_MAX_MS = 60_000;
@@ -102,6 +117,14 @@ export class BalanceSocketClient {
     this.onReconnect = hook;
   }
 
+  /**
+   * Registers callback fired when the namespace handshake succeeds.
+   * @param hook Called after `connect` packet is acknowledged by the server.
+   */
+  setNamespaceConnectedHook(hook: NamespaceConnectedHook | null) {
+    this.onNamespaceConnected = hook;
+  }
+
   /** Subscribes to Socket.IO events from the server. */
   onEvent(handler: SocketHandler) {
     this.handlers.add(handler);
@@ -139,7 +162,17 @@ export class BalanceSocketClient {
       );
     }
 
-    const socket = await network.websocket.connect(url);
+    let socket: AddonWebSocket;
+    try {
+      socket = await network.websocket.connect(url);
+    } catch (error) {
+      console.error('[balance] socket connect error:', error);
+      if (!this.intentionalClose) {
+        this.scheduleReconnect('connect_error');
+      }
+      return;
+    }
+
     this.activeSocket = socket;
 
     socket.On('message', (raw: unknown) => {
@@ -160,7 +193,9 @@ export class BalanceSocketClient {
       this.activeSocket = null;
 
       const initiatedByNamespace = this.pendingNamespaceClose;
+      const authRejected = this.pendingAuthRejected;
       this.pendingNamespaceClose = false;
+      this.pendingAuthRejected = false;
 
       if (!this.intentionalClose && !initiatedByNamespace) {
         const closeInfo =
@@ -175,7 +210,12 @@ export class BalanceSocketClient {
       }
 
       if (!this.intentionalClose) {
-        this.scheduleReconnect(initiatedByNamespace ? 'namespace' : 'transport');
+        const reason = authRejected
+          ? 'auth_rejected'
+          : initiatedByNamespace
+            ? 'namespace'
+            : 'transport';
+        this.scheduleReconnect(reason);
       }
     });
 
@@ -184,6 +224,9 @@ export class BalanceSocketClient {
         return;
       }
       console.error('[balance] socket error:', error);
+      if (!this.intentionalClose && !this.reconnectTimer) {
+        this.scheduleReconnect('connect_error');
+      }
     });
   }
 
@@ -194,6 +237,7 @@ export class BalanceSocketClient {
     this.clearStableConnectionTimer();
     this.stopPing();
     this.namespaceConnected = false;
+    this.pendingAuthRejected = false;
     this.activeSocket?.Destroy();
     this.activeSocket = null;
   }
@@ -234,6 +278,9 @@ export class BalanceSocketClient {
       this.startPing();
       this.scheduleStableConnectionReset();
       console.log('[balance] socket namespace connected');
+      if (this.onNamespaceConnected) {
+        void this.onNamespaceConnected();
+      }
       return;
     }
 
@@ -253,6 +300,7 @@ export class BalanceSocketClient {
       );
       this.namespaceConnected = false;
       this.stopPing();
+      this.pendingAuthRejected = true;
       this.closeAfterNamespaceEnd();
       return;
     }
@@ -287,9 +335,7 @@ export class BalanceSocketClient {
       // Keep default ping interval when handshake JSON is unexpected.
     }
 
-    socket.Send(
-      `40${this.namespacePacketPrefix},${JSON.stringify(this.auth)}`
-    );
+    socket.Send(`40${this.namespacePacketPrefix},${JSON.stringify(this.auth)}`);
   }
 
   private startPing() {
@@ -322,11 +368,12 @@ export class BalanceSocketClient {
     }
   }
 
-  private scheduleReconnect(reason: 'namespace' | 'transport') {
+  private scheduleReconnect(reason: BalanceSocketReconnectReason) {
     if (this.reconnectTimer || this.intentionalClose) {
       return;
     }
 
+    this.lastReconnectReason = reason;
     this.reconnectAttempt += 1;
     const delayMs = this.getReconnectDelayMs();
     if (this.reconnectAttempt === 1) {
@@ -362,13 +409,15 @@ export class BalanceSocketClient {
     return {
       attempt: this.reconnectAttempt,
       quickDisconnect,
+      reason: this.lastReconnectReason,
     };
   }
 
   private getReconnectDelayMs() {
     const exponential = Math.min(
       BalanceSocketClient.RECONNECT_MAX_MS,
-      BalanceSocketClient.RECONNECT_BASE_MS * 2 ** Math.max(0, this.reconnectAttempt - 1)
+      BalanceSocketClient.RECONNECT_BASE_MS *
+        2 ** Math.max(0, this.reconnectAttempt - 1)
     );
     const jitterMs = Math.floor(Math.random() * 1_000);
     return exponential + jitterMs;

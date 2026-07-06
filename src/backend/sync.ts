@@ -1,18 +1,19 @@
 import {
+  ADDON_ID,
   BALANCE_SOCKET_NAMESPACE,
   BALANCE_SOCKET_PATH,
 } from '../constants';
-import type {
-  BalanceSpendCommand,
-  BalanceSyncPayload,
-} from '../types';
+import type { BalanceSpendCommand, BalanceSyncPayload } from '../types';
 import { resolveBalanceCurrency } from '../balance/currency';
 import { loadParams, saveParams } from '../balance/store';
 import { getBroadcasterProfile } from '../twitch/api';
 import { buildSyncCatalog } from '../triggers/catalog';
 import { executeSpendCommand } from '../triggers/dispatch';
 import { buildApiUrl, resolveApiBaseUrl } from './urls';
-import { BalanceSocketClient } from './socket';
+import {
+  BalanceSocketClient,
+  type BalanceSocketReconnectContext,
+} from './socket';
 import { parseRegisterResponse, resolveLicenseAuth } from './register';
 
 let socketClient: BalanceSocketClient | null = null;
@@ -23,43 +24,109 @@ const buildSocketAuth = (params: {
 }) => ({
   sessionToken: params.session_token,
   licenseId: params.license_id,
+  addonId: ADDON_ID,
 });
+
+/**
+ * Refreshes socket auth from persisted params and re-registers when the session is invalid.
+ * @param context Reconnect context from the socket client.
+ */
+const prepareSocketReconnect = async (
+  context: BalanceSocketReconnectContext
+) => {
+  status.Update({
+    current: 'connecting',
+    message: {
+      en: 'Reconnecting to balance server…',
+      ru: 'Переподключение к серверу баланса…',
+      uk: 'Перепідключення до сервера балансу…',
+    },
+  });
+
+  const params = await loadParams();
+  socketClient?.updateAuth(buildSocketAuth(params));
+
+  if (context.reason === 'auth_rejected') {
+    await registerBackendSession();
+    const refreshed = await loadParams();
+    socketClient?.updateAuth(buildSocketAuth(refreshed));
+    return;
+  }
+
+  if (context.reason === 'connect_error' || context.reason === 'transport') {
+    return;
+  }
+};
+
+/**
+ * Syncs state after namespace connect; re-registers when the server lost the session.
+ */
+const handleNamespaceConnected = async () => {
+  status.Update({
+    current: 'online',
+    message: {
+      en: 'Balance server connected',
+      ru: 'Сервер баланса подключён',
+      uk: 'Сервер балансу підключено',
+    },
+  });
+
+  const sync = await syncStateToBackend();
+  if (sync.success) {
+    return;
+  }
+
+  if (sync.code === 'session_invalid' || sync.code === 'session_expired') {
+    await registerBackendSession();
+    const refreshed = await loadParams();
+    socketClient?.updateAuth(buildSocketAuth(refreshed));
+    await syncStateToBackend();
+  }
+};
 
 /**
  * Builds the payload sent to the balance backend.
  * @example const payload = await buildSyncPayload();
  */
-export const buildSyncPayload = async (): Promise<BalanceSyncPayload | null> => {
-  const params = await loadParams();
-  const streamer = await getBroadcasterProfile();
-  if (!streamer) {
-    return null;
-  }
+export const buildSyncPayload =
+  async (): Promise<BalanceSyncPayload | null> => {
+    const params = await loadParams();
+    const streamer = await getBroadcasterProfile();
+    if (!streamer) {
+      return null;
+    }
 
-  const currencyCode = await resolveBalanceCurrency();
-  const catalog = await buildSyncCatalog(params);
+    const currencyCode = await resolveBalanceCurrency();
+    const catalog = await buildSyncCatalog(params);
 
-  return {
-    licenseId: params.license_id,
-    sessionToken: params.session_token,
-    streamer: {
-      displayName: streamer.displayName,
-      avatar: streamer.avatar,
-      login: streamer.login,
-    },
-    currency: String(currencyCode),
-    viewers: params.viewers.map((viewer: { twitchId: string; login: string; displayName: string; balance: number }) => ({
-      twitchId: viewer.twitchId,
-      login: viewer.login,
-      displayName: viewer.displayName,
-      balance: viewer.balance,
-    })),
-    addons: catalog.addons,
-    sounds: catalog.sounds,
-    categories: catalog.categories,
-    allowSpendMessage: params.allow_spend_message,
+    return {
+      licenseId: params.license_id,
+      sessionToken: params.session_token,
+      streamer: {
+        displayName: streamer.displayName,
+        avatar: streamer.avatar,
+        login: streamer.login,
+      },
+      currency: String(currencyCode),
+      viewers: params.viewers.map(
+        (viewer: {
+          twitchId: string;
+          login: string;
+          displayName: string;
+          balance: number;
+        }) => ({
+          twitchId: viewer.twitchId,
+          login: viewer.login,
+          displayName: viewer.displayName,
+          balance: viewer.balance,
+        })
+      ),
+      addons: catalog.addons,
+      sounds: catalog.sounds,
+      categories: catalog.categories,
+      allowSpendMessage: params.allow_spend_message,
+    };
   };
-};
 
 /**
  * Registers the addon session on the balance backend.
@@ -106,10 +173,18 @@ export const syncStateToBackend = async () => {
 
   const url = await buildApiUrl('/sync');
   const response = await network.request.post(url, payload);
-  const parsed = JSON.parse(response) as { success?: boolean; message?: string };
+  const parsed = JSON.parse(response) as {
+    success?: boolean;
+    message?: string;
+    code?: string;
+  };
   return parsed.success
     ? { success: true as const }
-    : { success: false as const, message: parsed.message };
+    : {
+        success: false as const,
+        message: parsed.message,
+        code: parsed.code,
+      };
 };
 
 /**
@@ -132,11 +207,12 @@ export const connectBalanceSocket = async () => {
     buildSocketAuth(refreshed)
   );
 
-  socketClient.setReconnectHook(async () => {
-    await registerBackendSession();
-    const params = await loadParams();
-    socketClient?.updateAuth(buildSocketAuth(params));
-    await syncStateToBackend();
+  socketClient.setReconnectHook(async context => {
+    await prepareSocketReconnect(context);
+  });
+
+  socketClient.setNamespaceConnectedHook(async () => {
+    await handleNamespaceConnected();
   });
 
   socketClient.onEvent(async (event, payload) => {
@@ -181,46 +257,7 @@ export const startBackendConnection = async () => {
 
     await registerBackendSession();
     await syncStateToBackend();
-
-    try {
-      await connectBalanceSocket();
-    } catch (socketError) {
-      const socketMessage =
-        socketError instanceof Error ? socketError.message : 'Socket connection failed';
-      console.error('[balance] socket connection failed:', socketMessage, socketError);
-      status.Update({
-        current: 'error',
-        message: {
-          en: `Registered, but socket failed: ${socketMessage}`,
-          ru: `Регистрация прошла, но сокет не подключился: ${socketMessage}`,
-          uk: `Реєстрація пройшла, але сокет не підключився: ${socketMessage}`,
-        },
-      });
-      notify.Send({
-        id: `${data.id}_backend_socket_error`,
-        type: 'warning',
-        title: {
-          en: 'Balance server',
-          ru: 'Сервер баланса',
-          uk: 'Сервер балансу',
-        },
-        message: {
-          en: `Session registered, but realtime connection failed: ${socketMessage}`,
-          ru: `Сессия зарегистрирована, но realtime-соединение не установлено: ${socketMessage}`,
-          uk: `Сесію зареєстровано, але realtime-з'єднання не встановлено: ${socketMessage}`,
-        },
-      });
-      return;
-    }
-
-    status.Update({
-      current: 'online',
-      message: {
-        en: 'Balance server connected',
-        ru: 'Сервер баланса подключён',
-        uk: 'Сервер балансу підключено',
-      },
-    });
+    await connectBalanceSocket();
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'Backend registration failed';
