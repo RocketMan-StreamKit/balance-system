@@ -3,6 +3,7 @@ import {
   convertToBalanceCurrency,
   resolveBalanceCurrency,
 } from './balance/currency';
+import { ensureBalanceCurrencySynced } from './balance/currency-sync';
 import { importStreamKitLegacyViewers } from './balance/import-legacy';
 import { applyBulkViewerAction } from './balance/bulk-actions';
 import { deleteViewerBalance, setViewerBalance } from './twitch/api';
@@ -42,6 +43,7 @@ export const registerHttpEndpoints = async () => {
       return unauthorized();
     }
 
+    await ensureBalanceCurrencySynced();
     const params = await loadParams();
     const currencyCode = await resolveBalanceCurrency();
     const appConfig = (await api.config.getConfig()) as {

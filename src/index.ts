@@ -1,15 +1,19 @@
 import { ADDON_ID } from './constants';
 import { registerBalanceConfig } from './config';
-import { subscribeDonationCredits, setDonationSyncHook } from './balance/donations';
+import {
+  ensureBalanceCurrencySynced,
+  registerBalanceCurrencyWatcher,
+} from './balance/currency-sync';
+import {
+  subscribeDonationCredits,
+  setDonationSyncHook,
+} from './balance/donations';
 import { registerBalanceRpc } from './rpc';
 import {
   bindViewerBackupOnSave,
   restoreViewersFromBackup,
 } from './backend/backup';
-import {
-  resyncBackend,
-  startBackendConnection,
-} from './backend/sync';
+import { resyncBackend, startBackendConnection } from './backend/sync';
 import { registerHttpEndpoints } from './endpoints';
 import { registerBalanceDashboardPlatform } from './dashboard/platform';
 import { registerBalanceTriggerLifecycle } from './triggers/lifecycle';
@@ -18,10 +22,12 @@ import { syncShopFromBalanceRules } from './triggers/sync-from-applied';
 
 registerBalanceConfig();
 bindViewerBackupOnSave();
+registerBalanceCurrencyWatcher();
 
 void (async () => {
   await registerHttpEndpoints();
   await restoreViewersFromBackup();
+  await ensureBalanceCurrencySynced();
   registerBalanceRpc();
   await registerBalanceDashboardPlatform();
   registerBalanceTriggerLifecycle();

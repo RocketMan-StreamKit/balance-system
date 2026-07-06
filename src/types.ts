@@ -47,6 +47,8 @@ export type BalanceShopItem = {
 /** Addon params persisted via GenerateConfig / api.config. */
 export type BalanceAddonParams = {
   currency: SupportedCurrency | 'app';
+  /** Currency code balances and shop prices are stored in. */
+  stored_currency: string;
   api_server_override: string;
   allow_external_credit: boolean;
   /** When true, viewers can attach a message on the web page before spend. */

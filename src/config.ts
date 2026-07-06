@@ -7,21 +7,20 @@ import {
 } from './constants';
 import type { BalanceAddonParams } from './types';
 
-const currencyOptions = () =>
-  [
-    {
-      value: 'app',
-      label: {
-        en: 'Same as app settings',
-        ru: 'Как в настройках приложения',
-        uk: 'Як у налаштуваннях програми',
-      },
+const currencyOptions = () => [
+  {
+    value: 'app',
+    label: {
+      en: 'Same as app settings',
+      ru: 'Как в настройках приложения',
+      uk: 'Як у налаштуваннях програми',
     },
-    ...SUPPORTED_CURRENCIES.map(code => ({
-      value: code,
-      label: { en: code, ru: code, uk: code },
-    })),
-  ];
+  },
+  ...SUPPORTED_CURRENCIES.map(code => ({
+    value: code,
+    label: { en: code, ru: code, uk: code },
+  })),
+];
 
 /**
  * Registers addon settings schema and default params.
@@ -115,6 +114,7 @@ export const registerBalanceConfig = () => {
         },
       },
     },
+    { key: 'stored_currency', type: 'hidden', default: '' },
     { key: 'viewers_json', type: 'text', default: '[]' },
     { key: 'categories_json', type: 'text', default: '[]' },
     { key: 'shop_items_json', type: 'text', default: '[]' },
@@ -148,6 +148,7 @@ export const registerBalanceConfig = () => {
 
   return {
     currency: 'app' as BalanceAddonParams['currency'],
+    stored_currency: '',
     api_server_override: DEFAULT_API_SERVER,
     allow_external_credit: false,
     allow_spend_message: false,
