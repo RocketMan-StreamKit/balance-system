@@ -17,15 +17,10 @@ export const registerBalanceDashboardPlatform = async () => {
 };
 
 /**
- * Localized dashboard message for a viewer site spend.
- * @param price Spent balance amount.
- * @param currencyCode Balance currency code.
+ * Localized dashboard message for a viewer site spend (amount is passed separately).
  */
-export const buildSiteSpendMessage = (price: number, currencyCode: string) => {
-  const amount = `${price.toFixed(2)} ${currencyCode}`;
-  return {
-    en: `Site activation: ${amount}`,
-    ru: `Активация через сайт: ${amount}`,
-    uk: `Активація через сайт: ${amount}`,
-  };
-};
+export const buildSiteSpendMessage = () => ({
+  en: 'Site activation',
+  ru: 'Активация через сайт',
+  uk: 'Активація через сайт',
+});

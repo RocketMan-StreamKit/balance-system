@@ -45,7 +45,8 @@ export const executeSpendCommand = async (command: BalanceSpendCommand) => {
       id: random.id(),
       type: 'custom',
       platform: ADDON_ID,
-      message: buildSiteSpendMessage(item.price, String(currencyCode)),
+      amount: [item.price, String(currencyCode)],
+      message: buildSiteSpendMessage(),
       from: viewer.twitchId,
     },
     {
