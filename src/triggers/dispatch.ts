@@ -1,8 +1,16 @@
 import { ADDON_ID } from '../constants';
 import type { BalanceShopItem, BalanceSpendCommand } from '../types';
-import { buildSiteSpendMessage } from '../dashboard/platform';
+import {
+  buildSiteSpendMessage,
+  normalizeSpendMessage,
+} from '../dashboard/platform';
 import { resolveBalanceCurrency } from '../balance/currency';
-import { findViewer, loadParams, saveParams, upsertViewerEntry } from '../balance/store';
+import {
+  findViewer,
+  loadParams,
+  saveParams,
+  upsertViewerEntry,
+} from '../balance/store';
 import { resolveTwitchAvatarById } from '../twitch/api';
 import { buildSpendTriggers } from './registry';
 
@@ -12,7 +20,9 @@ import { buildSpendTriggers } from './registry';
  */
 export const executeSpendCommand = async (command: BalanceSpendCommand) => {
   const params = await loadParams();
-  const item = params.shop_items.find((entry: BalanceShopItem) => entry.id === command.itemId);
+  const item = params.shop_items.find(
+    (entry: BalanceShopItem) => entry.id === command.itemId
+  );
   if (!item) {
     return { success: false as const, message: 'Unknown shop item' };
   }
@@ -39,6 +49,10 @@ export const executeSpendCommand = async (command: BalanceSpendCommand) => {
 
   const currencyCode = await resolveBalanceCurrency();
   const avatar = await resolveTwitchAvatarById(viewer.twitchId);
+  const spendMessage = normalizeSpendMessage(
+    command.message,
+    params.allow_spend_message
+  );
 
   await dashboard.addRecord(
     {
@@ -46,7 +60,7 @@ export const executeSpendCommand = async (command: BalanceSpendCommand) => {
       type: 'custom',
       platform: ADDON_ID,
       amount: [item.price, String(currencyCode)],
-      message: buildSiteSpendMessage(),
+      message: buildSiteSpendMessage(spendMessage),
       from: viewer.twitchId,
     },
     {

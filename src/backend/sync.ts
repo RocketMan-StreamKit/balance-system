@@ -57,6 +57,7 @@ export const buildSyncPayload = async (): Promise<BalanceSyncPayload | null> => 
     addons: catalog.addons,
     sounds: catalog.sounds,
     categories: catalog.categories,
+    allowSpendMessage: params.allow_spend_message,
   };
 };
 

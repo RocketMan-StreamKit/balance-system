@@ -65,6 +65,23 @@ export const registerBalanceConfig = () => {
       },
     },
     {
+      key: 'allow_spend_message',
+      type: 'boolean',
+      default: false,
+      editor: {
+        label: {
+          en: 'Add message to activation',
+          ru: 'Добавить сообщение к вызову',
+          uk: 'Додати повідомлення до виклику',
+        },
+        description: {
+          en: 'When enabled, viewers can enter an optional message on the web page before activating an action.',
+          ru: 'При включении зрители смогут указать текст сообщения на сайте перед активацией действия.',
+          uk: 'Якщо увімкнено, глядачі зможуть вказати текст повідомлення на сайті перед активацією дії.',
+        },
+      },
+    },
+    {
       key: 'viewer_backup_enabled',
       type: 'boolean',
       default: true,
@@ -133,6 +150,7 @@ export const registerBalanceConfig = () => {
     currency: 'app' as BalanceAddonParams['currency'],
     api_server_override: DEFAULT_API_SERVER,
     allow_external_credit: false,
+    allow_spend_message: false,
     viewer_backup_enabled: true,
     viewers_json: '[]',
     categories_json: '[]',

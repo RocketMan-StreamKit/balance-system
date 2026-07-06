@@ -141,7 +141,8 @@ Replaces in-memory state for the session.
     "triggers": [
       { "id": "auto:shop:sounds:3", "price": 3, "label": { "en": "Spider Test" } }
     ]
-  }
+  },
+  "allowSpendMessage": false
 }
 ```
 
@@ -172,6 +173,7 @@ Public endpoint for the viewer web page (no session token).
   "status": "online",
   "streamer": { "displayName": "…", "avatar": "…" },
   "currency": "RUB",
+  "allowSpendMessage": false,
   "categories": [ … ],
   "addons": [ … ],
   "viewer": null
@@ -226,7 +228,7 @@ Namespace auth packet:
 
 | Event | Payload | Description |
 | --- | --- | --- |
-| `balance:spend` | `{ requestId, viewerTwitchId, viewerLogin?, itemId }` | Viewer requested purchase on web page |
+| `balance:spend` | `{ requestId, viewerTwitchId, viewerLogin?, itemId, message? }` | Viewer requested purchase on web page. `message` is optional viewer text (max 200 chars); only accepted when `allowSpendMessage` is `true` in synced state. |
 
 **Addon → server events:**
 
@@ -236,7 +238,7 @@ Namespace auth packet:
 
 ### Spend flow
 
-1. Authenticated viewer clicks trigger on web page
+1. Authenticated viewer clicks trigger on web page (optionally enters message when `allowSpendMessage` is enabled)
 2. Server checks `viewer.balance >= item.price` (from RAM mirror)
 3. Server emits `balance:spend` to connected addon socket
 4. Addon deducts balance locally, fires dashboard trigger, calls `/sync`

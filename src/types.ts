@@ -49,6 +49,8 @@ export type BalanceAddonParams = {
   currency: SupportedCurrency | 'app';
   api_server_override: string;
   allow_external_credit: boolean;
+  /** When true, viewers can attach a message on the web page before spend. */
+  allow_spend_message: boolean;
   /** When true, viewer balances are uploaded to the balance backend backup API. */
   viewer_backup_enabled: boolean;
   viewers: ViewerEntry[];
@@ -83,6 +85,8 @@ export type BalanceSyncPayload = {
   addons: BalanceSyncAddonEntry[];
   sounds?: BalanceSyncSoundsEntry;
   categories: BalanceCategory[];
+  /** When true, the viewer page may show a message field before spend. */
+  allowSpendMessage: boolean;
 };
 
 /** Purchasable action on the viewer page (no addon title duplication). */
@@ -117,4 +121,6 @@ export type BalanceSpendCommand = {
   viewerTwitchId: string;
   viewerLogin?: string;
   itemId: string;
+  /** Optional viewer message when `allow_spend_message` is enabled. */
+  message?: string;
 };
