@@ -11,10 +11,12 @@
     "uk": "Враховує донати без тригерів, веде баланс глядачів і надає веб-сторінку з авторизацією Twitch для витрати балансу на дії на стрімі."
   },
   "type": "application",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "author": "XanderWP",
   "icon": "logo.png",
-  "depends_on": ["twitch"],
+  "depends_on": [
+    "twitch"
+  ],
   "permissions": [
     "WEB_CONTENT",
     "WEB_END_POINTS",
