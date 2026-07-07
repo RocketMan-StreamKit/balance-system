@@ -57,9 +57,9 @@ export const registerBalanceConfig = () => {
           uk: 'Дозволити іншим аддонам зараховувати баланс',
         },
         description: {
-          en: 'Exposes RPC method `creditBalance` for other addons.',
-          ru: 'Открывает RPC-метод `creditBalance` для других аддонов.',
-          uk: 'Відкриває RPC-метод `creditBalance` для інших аддонів.',
+          en: 'Allows other addons to credit viewer balances through this addon (RPC `creditBalance`). Does not affect balance top-ups from donations registered in the app.',
+          ru: 'Позволяет другим аддонам начислять баланс зрителям через этот аддон (RPC `creditBalance`). Не влияет на пополнение баланса от донатов, которые регистрируются в приложении.',
+          uk: 'Дозволяє іншим аддонам нараховувати баланс глядачам через цей аддон (RPC `creditBalance`). Не впливає на поповнення балансу від донатів, які реєструються в застосунку.',
         },
       },
     },

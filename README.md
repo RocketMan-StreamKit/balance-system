@@ -37,7 +37,7 @@ In **developer mode**, choose API server in addon settings (`rocketman-streams.c
 | Option | Description |
 | --- | --- |
 | Balance currency | Storage/display currency (default: same as app); all stored amounts are converted when this or the app currency (in app mode) changes |
-| Allow other addons to credit balance | Enables RPC `creditBalance` |
+| Allow other addons to credit balance | Lets other addons credit viewer balances through this addon (RPC `creditBalance`); does not affect donation-based top-ups registered in the app |
 | Add message to activation | Lets viewers attach an optional message on the web page before spend |
 | Backup viewer balances on server | Uploads viewer data to backend backup API (default: on) |
 | API server (dev only) | Manual backend host selection |
