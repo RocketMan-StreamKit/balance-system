@@ -159,6 +159,21 @@
   min-width: 320px;
 }
 
+.balance-merge-row {
+  display: flex;
+  gap: 8px;
+}
+
+.balance-merge-row .bulk-merge-source {
+  flex: 0 0 min(42%, 180px);
+  min-width: 0;
+}
+
+.balance-merge-row input {
+  flex: 1;
+  min-width: 0;
+}
+
 .balance-copy-row {
   display: flex;
   gap: 8px;

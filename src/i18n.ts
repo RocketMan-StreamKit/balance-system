@@ -234,9 +234,19 @@ const strings: UiStrings = {
     uk: "Об'єднання глядачів",
   },
   bulkMergeHint: {
-    en: 'Balances of selected viewers are summed by default. Other fields use the first selected viewer.',
-    ru: 'Балансы выбранных зрителей суммируются по умолчанию. Остальные поля берутся от первого выбранного.',
-    uk: 'Баланси обраних глядачів за замовчуванням підсумовуються. Інші поля — від першого обраного.',
+    en: 'Pick a source for each field or edit values manually. Balance defaults to the sum of selected viewers.',
+    ru: 'Выберите источник для каждого поля или отредактируйте значения вручную. Баланс по умолчанию — сумма выбранных зрителей.',
+    uk: 'Оберіть джерело для кожного поля або відредагуйте значення вручну. Баланс за замовчуванням — сума обраних глядачів.',
+  },
+  bulkMergeManual: {
+    en: 'Manual',
+    ru: 'Вручную',
+    uk: 'Вручну',
+  },
+  bulkMergeBalanceSum: {
+    en: 'Sum',
+    ru: 'Сумма',
+    uk: 'Сума',
   },
   twitchId: {
     en: 'Twitch ID',

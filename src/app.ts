@@ -17,6 +17,11 @@ type AppState = {
 
 type BulkAmountMode = 'add' | 'subtract';
 
+const MERGE_SOURCE_MANUAL = '__manual__';
+const MERGE_SOURCE_SUM = '__sum__';
+
+type MergeFieldKey = 'id' | 'login' | 'name' | 'balance';
+
 const params = new URLSearchParams(window.location.search);
 const token = params.get('token') ?? '';
 const port = window.location.port;
@@ -33,6 +38,8 @@ const selectedIds = new Set<string>();
 let editingViewer: ViewerRow | null = null;
 let bulkAmountMode: BulkAmountMode = 'add';
 let copyFeedbackTimer: ReturnType<typeof setTimeout> | null = null;
+let bulkMergeViewers: ViewerRow[] = [];
+let mergeFieldUpdating = false;
 
 const el = {
   title: document.getElementById('title'),
@@ -122,6 +129,18 @@ const el = {
   bulkMergeLoginLabel: document.getElementById('bulk-merge-login-label'),
   bulkMergeNameLabel: document.getElementById('bulk-merge-name-label'),
   bulkMergeBalanceLabel: document.getElementById('bulk-merge-balance-label'),
+  bulkMergeIdSource: document.getElementById(
+    'bulk-merge-id-source'
+  ) as HTMLSelectElement,
+  bulkMergeLoginSource: document.getElementById(
+    'bulk-merge-login-source'
+  ) as HTMLSelectElement,
+  bulkMergeNameSource: document.getElementById(
+    'bulk-merge-name-source'
+  ) as HTMLSelectElement,
+  bulkMergeBalanceSource: document.getElementById(
+    'bulk-merge-balance-source'
+  ) as HTMLSelectElement,
   bulkMergeId: document.getElementById('bulk-merge-id') as HTMLInputElement,
   bulkMergeLogin: document.getElementById(
     'bulk-merge-login'
@@ -133,6 +152,24 @@ const el = {
   bulkMergeCancel: document.getElementById('bulk-merge-cancel'),
   bulkMergeSubmit: document.getElementById('bulk-merge-submit'),
 };
+
+type MergeFieldConfig = {
+  key: MergeFieldKey;
+  input: HTMLInputElement | null;
+  source: HTMLSelectElement | null;
+};
+
+/** Returns merge dialog field bindings. */
+const getMergeFieldConfigs = (): MergeFieldConfig[] => [
+  { key: 'id', input: el.bulkMergeId, source: el.bulkMergeIdSource },
+  { key: 'login', input: el.bulkMergeLogin, source: el.bulkMergeLoginSource },
+  { key: 'name', input: el.bulkMergeName, source: el.bulkMergeNameSource },
+  {
+    key: 'balance',
+    input: el.bulkMergeBalance,
+    source: el.bulkMergeBalanceSource,
+  },
+];
 
 /**
  * Performs authenticated fetch to addon HTTP endpoint.
@@ -384,6 +421,9 @@ const applyLocale = () => {
   if (el.bulkMergeSubmit) {
     el.bulkMergeSubmit.textContent = t('bulkMergeApply', lang);
   }
+  if (bulkMergeViewers.length >= 2) {
+    refreshBulkMergeSourceSelects();
+  }
 
   if (el.bulkAmountTitle) {
     el.bulkAmountTitle.textContent =
@@ -401,6 +441,125 @@ const applyLocale = () => {
   }
 
   updateBulkBar();
+};
+
+/** Builds a readable label for a viewer in merge source selectors. */
+const formatMergeViewerLabel = (viewer: ViewerRow) => {
+  const name = viewer.displayName?.trim();
+  return name && name.toLowerCase() !== viewer.login.toLowerCase()
+    ? `${viewer.login} (${name})`
+    : viewer.login;
+};
+
+/**
+ * Fills a merge source select with viewer options.
+ * @param select Target select element.
+ * @param viewers Selected viewers for the merge dialog.
+ * @param options Optional sum preset for balance field.
+ */
+const fillMergeSourceSelect = (
+  select: HTMLSelectElement | null,
+  viewers: ViewerRow[],
+  options: { includeSum?: boolean } = {}
+) => {
+  if (!select) {
+    return;
+  }
+
+  const current = select.value;
+  select.innerHTML = '';
+
+  if (options.includeSum) {
+    const sumOption = document.createElement('option');
+    sumOption.value = MERGE_SOURCE_SUM;
+    sumOption.textContent = t('bulkMergeBalanceSum', lang);
+    select.appendChild(sumOption);
+  }
+
+  for (const viewer of viewers) {
+    const option = document.createElement('option');
+    option.value = viewer.twitchId;
+    option.textContent = formatMergeViewerLabel(viewer);
+    select.appendChild(option);
+  }
+
+  const manualOption = document.createElement('option');
+  manualOption.value = MERGE_SOURCE_MANUAL;
+  manualOption.textContent = t('bulkMergeManual', lang);
+  select.appendChild(manualOption);
+
+  if ([...select.options].some(option => option.value === current)) {
+    select.value = current;
+  }
+};
+
+/** Refreshes merge source selectors while preserving current values. */
+const refreshBulkMergeSourceSelects = () => {
+  for (const field of getMergeFieldConfigs()) {
+    const savedSource = field.source?.value ?? '';
+    fillMergeSourceSelect(field.source, bulkMergeViewers, {
+      includeSum: field.key === 'balance',
+    });
+    if (field.source && savedSource) {
+      field.source.value = savedSource;
+    }
+  }
+};
+
+/**
+ * Resolves a merge field value from the selected source.
+ * @param field Merge field key.
+ * @param sourceValue Selected source option value.
+ * @param viewers Selected viewers for the merge dialog.
+ */
+const getMergeFieldValue = (
+  field: MergeFieldKey,
+  sourceValue: string,
+  viewers: ViewerRow[]
+) => {
+  if (sourceValue === MERGE_SOURCE_SUM) {
+    return viewers.reduce((sum, viewer) => sum + viewer.balance, 0).toFixed(2);
+  }
+
+  const viewer = viewers.find(item => item.twitchId === sourceValue);
+  if (!viewer) {
+    return '';
+  }
+
+  switch (field) {
+    case 'id':
+      return viewer.twitchId;
+    case 'login':
+      return viewer.login;
+    case 'name':
+      return viewer.displayName || viewer.login;
+    case 'balance':
+      return viewer.balance.toFixed(2);
+  }
+};
+
+/** Applies the selected source value to a merge dialog field. */
+const applyMergeFieldFromSource = (field: MergeFieldConfig) => {
+  const sourceValue = field.source?.value ?? '';
+  if (!field.input || sourceValue === MERGE_SOURCE_MANUAL) {
+    return;
+  }
+
+  const value = getMergeFieldValue(field.key, sourceValue, bulkMergeViewers);
+  if (!value) {
+    return;
+  }
+
+  mergeFieldUpdating = true;
+  field.input.value = value;
+  mergeFieldUpdating = false;
+};
+
+/** Switches a merge field source selector to manual mode. */
+const setMergeFieldManual = (field: MergeFieldConfig) => {
+  if (field.source) {
+    field.source.value = MERGE_SOURCE_MANUAL;
+  }
 };
 
 /** Loads application state from worker endpoints. */
@@ -590,17 +749,39 @@ const openBulkMergeDialog = () => {
     return;
   }
 
+  bulkMergeViewers = selected;
+  refreshBulkMergeSourceSelects();
+
   const first = selected[0];
   const summed = selected.reduce((sum, viewer) => sum + viewer.balance, 0);
 
-  if (el.bulkMergeId) el.bulkMergeId.value = first.twitchId;
-  if (el.bulkMergeLogin) el.bulkMergeLogin.value = first.login;
+  if (el.bulkMergeIdSource) {
+    el.bulkMergeIdSource.value = first.twitchId;
+  }
+  if (el.bulkMergeLoginSource) {
+    el.bulkMergeLoginSource.value = first.twitchId;
+  }
+  if (el.bulkMergeNameSource) {
+    el.bulkMergeNameSource.value = first.twitchId;
+  }
+  if (el.bulkMergeBalanceSource) {
+    el.bulkMergeBalanceSource.value = MERGE_SOURCE_SUM;
+  }
+
+  mergeFieldUpdating = true;
+  if (el.bulkMergeId) {
+    el.bulkMergeId.value = first.twitchId;
+  }
+  if (el.bulkMergeLogin) {
+    el.bulkMergeLogin.value = first.login;
+  }
   if (el.bulkMergeName) {
     el.bulkMergeName.value = first.displayName || first.login;
   }
   if (el.bulkMergeBalance) {
     el.bulkMergeBalance.value = summed.toFixed(2);
   }
+  mergeFieldUpdating = false;
 
   el.bulkMergeDialog?.showModal();
 };
@@ -979,6 +1160,17 @@ const bindEvents = () => {
     openBulkAmountDialog('subtract')
   );
   el.bulkMerge?.addEventListener('click', openBulkMergeDialog);
+  for (const field of getMergeFieldConfigs()) {
+    field.source?.addEventListener('change', () => {
+      applyMergeFieldFromSource(field);
+    });
+    field.input?.addEventListener('input', () => {
+      if (mergeFieldUpdating) {
+        return;
+      }
+      setMergeFieldManual(field);
+    });
+  }
   el.copyPageUrl?.addEventListener('click', async () => {
     if (!state.viewerPageUrl) {
       return;

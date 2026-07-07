@@ -175,19 +175,31 @@
         <p id="bulk-merge-hint" class="balance-hint"></p>
         <label class="balance-field">
           <span id="bulk-merge-id-label">Twitch ID</span>
-          <input id="bulk-merge-id" type="text" required />
+          <div class="balance-merge-row">
+            <select id="bulk-merge-id-source" class="bulk-merge-source"></select>
+            <input id="bulk-merge-id" type="text" required />
+          </div>
         </label>
         <label class="balance-field">
           <span id="bulk-merge-login-label">Login</span>
-          <input id="bulk-merge-login" type="text" required />
+          <div class="balance-merge-row">
+            <select id="bulk-merge-login-source" class="bulk-merge-source"></select>
+            <input id="bulk-merge-login" type="text" required />
+          </div>
         </label>
         <label class="balance-field">
           <span id="bulk-merge-name-label">Display name</span>
-          <input id="bulk-merge-name" type="text" required />
+          <div class="balance-merge-row">
+            <select id="bulk-merge-name-source" class="bulk-merge-source"></select>
+            <input id="bulk-merge-name" type="text" required />
+          </div>
         </label>
         <label class="balance-field">
           <span id="bulk-merge-balance-label">Balance</span>
-          <input id="bulk-merge-balance" type="number" min="0" step="0.01" required />
+          <div class="balance-merge-row">
+            <select id="bulk-merge-balance-source" class="bulk-merge-source"></select>
+            <input id="bulk-merge-balance" type="number" min="0" step="0.01" required />
+          </div>
         </label>
         <div class="balance-dialog-actions">
           <button type="button" id="bulk-merge-cancel" class="secondary-action">Cancel</button>
