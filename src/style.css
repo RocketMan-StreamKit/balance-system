@@ -140,10 +140,6 @@
   display: none;
 }
 
-.balance-table tbody tr.balance-viewer-row {
-  cursor: pointer;
-}
-
 .balance-table tbody tr:hover {
   background: color-mix(in srgb, var(--bg-display) 70%, var(--bg-panel) 30%);
 }
@@ -194,6 +190,17 @@
   padding-inline: 10px;
   font-size: 1.1rem;
   line-height: 1;
+}
+
+.balance-viewer-link {
+  color: var(--btn-primary);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.balance-viewer-link:hover {
+  color: color-mix(in srgb, var(--btn-primary) 82%, var(--text) 18%);
 }
 
 .balance-row-actions {

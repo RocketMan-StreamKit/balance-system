@@ -56,7 +56,6 @@ const el = {
   selectAll: document.getElementById('select-all') as HTMLInputElement,
   viewersBody: document.getElementById('viewers-body'),
   loadingCell: document.getElementById('loading-cell'),
-  colLogin: document.getElementById('col-login'),
   colName: document.getElementById('col-name'),
   colBalance: document.getElementById('col-balance'),
   actionsHeader: document.getElementById('actions-header'),
@@ -361,7 +360,6 @@ const applyLocale = () => {
   }
   if (el.viewerPageLabel)
     el.viewerPageLabel.textContent = t('viewerPage', lang);
-  if (el.colLogin) el.colLogin.textContent = t('columnLogin', lang);
   if (el.colName) el.colName.textContent = t('name', lang);
   if (el.colBalance) el.colBalance.textContent = t('balance', lang);
   if (el.actionsHeader) el.actionsHeader.textContent = t('actions', lang);
@@ -441,6 +439,19 @@ const applyLocale = () => {
   }
 
   updateBulkBar();
+};
+
+/**
+ * Builds the combined viewer label for the balance table.
+ * Shows login in parentheses when it differs from the display name (case-insensitive).
+ * @param viewer Viewer row.
+ */
+const formatViewerDisplayLabel = (viewer: ViewerRow) => {
+  const login = viewer.login.trim();
+  const name = (viewer.displayName?.trim() || login).trim();
+  return name.toLowerCase() !== login.toLowerCase()
+    ? `${name} (${login})`
+    : name;
 };
 
 /** Builds a readable label for a viewer in merge source selectors. */
@@ -632,7 +643,7 @@ const renderViewers = () => {
   if (state.viewers.length === 0) {
     const row = document.createElement('tr');
     const cell = document.createElement('td');
-    cell.colSpan = 5;
+    cell.colSpan = 4;
     cell.textContent = t('empty', lang);
     row.appendChild(cell);
     body.appendChild(row);
@@ -643,14 +654,6 @@ const renderViewers = () => {
   for (const viewer of state.viewers) {
     const row = document.createElement('tr');
     row.className = 'balance-viewer-row';
-    row.title = `https://www.twitch.tv/${viewer.login}`;
-    row.addEventListener('click', event => {
-      const target = event.target as HTMLElement;
-      if (target.closest('input, button, .balance-row-actions')) {
-        return;
-      }
-      void openTwitchProfile(viewer.login);
-    });
 
     const selectCell = document.createElement('td');
     selectCell.className = 'balance-col-select';
@@ -668,12 +671,15 @@ const renderViewers = () => {
     selectCell.appendChild(checkbox);
     row.appendChild(selectCell);
 
-    const loginCell = document.createElement('td');
-    loginCell.textContent = viewer.login;
-    row.appendChild(loginCell);
-
     const nameCell = document.createElement('td');
-    nameCell.textContent = viewer.displayName || viewer.login;
+    const nameLink = document.createElement('span');
+    nameLink.className = 'balance-viewer-link';
+    nameLink.textContent = formatViewerDisplayLabel(viewer);
+    nameLink.title = `https://www.twitch.tv/${viewer.login}`;
+    nameLink.addEventListener('click', () => {
+      void openTwitchProfile(viewer.login);
+    });
+    nameCell.appendChild(nameLink);
     row.appendChild(nameCell);
 
     const balanceCell = document.createElement('td');
@@ -998,9 +1004,9 @@ const submitBulkMerge = async () => {
 const isDialogOpen = () =>
   Boolean(
     el.editorDialog?.open ||
-      el.importDialog?.open ||
-      el.bulkAmountDialog?.open ||
-      el.bulkMergeDialog?.open
+    el.importDialog?.open ||
+    el.bulkAmountDialog?.open ||
+    el.bulkMergeDialog?.open
   );
 
 /** Polls worker state and viewer list, refreshing UI when data changes. */
