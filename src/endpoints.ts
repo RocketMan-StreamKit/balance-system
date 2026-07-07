@@ -28,6 +28,7 @@ export const registerHttpEndpoints = async () => {
   await network.endpoints.create('viewers', 'POST', 'onSaveViewer');
   await network.endpoints.create('viewers/import', 'POST', 'onImportViewers');
   await network.endpoints.create('viewers/bulk', 'POST', 'onBulkViewers');
+  await network.endpoints.create('viewers/delete', 'POST', 'onDeleteViewer');
   await network.endpoints.create('open-url', 'POST', 'onOpenUrl');
   await network.endpoints.create(
     'open-viewer-page',
