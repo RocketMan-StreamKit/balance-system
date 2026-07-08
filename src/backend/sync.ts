@@ -136,9 +136,12 @@ export const registerBackendSession = async () => {
   const params = await loadParams();
   const streamer = await getBroadcasterProfile({ force: true });
   if (!streamer) {
-    throw new Error(
-      'Twitch broadcaster profile is unavailable. Enable the Twitch addon and authorize your account.'
-    );
+    const message = {
+      en: 'Twitch broadcaster profile is unavailable. Enable the Twitch addon and authorize your account.',
+      ru: 'Профиль стримера Twitch недоступен. Включите аддон Twitch и авторизуйте аккаунт.',
+      uk: 'Профіль стрімера Twitch недоступний. Увімкніть аддон Twitch і авторизуйте акаунт.',
+    };
+    throw new Error(message[LANG.current] ?? message.en);
   }
 
   const url = await buildApiUrl('/register', params);
