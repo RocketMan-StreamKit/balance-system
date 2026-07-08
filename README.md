@@ -16,7 +16,7 @@ StreamKit+ application addon for **Twitch** streamers: tracks donations that did
 - Registers **Site activation** dashboard trigger (`valueType: number`, cost in balance currency) for overlays/sounds
 - Backend sync + Socket.IO spend commands (see [BACKEND.md](./BACKEND.md))
 - Server backup of viewer balances (restore from server on startup when local list is empty, debounced upload on changes)
-- RPC `creditBalance` for other addons (opt-in setting)
+- RPC for other addons: `canCreditBalance`, `getCurrency`, `creditBalance` (credit is opt-in)
 - Optional viewer message on web page spend (opt-in setting)
 
 ## Development
@@ -51,15 +51,24 @@ After the addon connects to the backend, copy **Viewer page URL** from settings 
 
 Format: `https://rocketman-streams.com/?streamkit={LICENSE_ID}`
 
-## RPC example
+## RPC examples
 
 ```js
+const { allowed } = await addons.request('balance-system', 'canCreditBalance');
+const { currency } = await addons.request('balance-system', 'getCurrency');
+
 const res = await addons.request(
   'balance-system',
   'creditBalance',
   { login: 'viewer_login', amount: 5 }
 );
 ```
+
+| Method | Description |
+| --- | --- |
+| `canCreditBalance` | Returns `{ allowed: boolean }` — whether RPC `creditBalance` is enabled in addon settings |
+| `getCurrency` | Returns `{ currency: string }` — effective balance currency (app currency when settings use "same as app") |
+| `creditBalance` | Credits viewer balance when `allowed` is true |
 
 ## Backend
 
