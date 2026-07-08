@@ -1,4 +1,4 @@
-import { ADDON_ID } from './constants';
+import { ADDON_ID, VIEWERS_PAGE_SIZE } from './constants';
 import { t, type UiLang } from './i18n';
 
 type ViewerRow = {
@@ -13,6 +13,8 @@ type AppState = {
   currencies: string[];
   viewerPageUrl: string;
   viewers: ViewerRow[];
+  totalViewers: number;
+  hasMoreViewers: boolean;
 };
 
 type BulkAmountMode = 'add' | 'subtract';
@@ -33,6 +35,8 @@ const state: AppState = {
   currencies: [],
   viewerPageUrl: '',
   viewers: [],
+  totalViewers: 0,
+  hasMoreViewers: false,
 };
 const selectedIds = new Set<string>();
 let editingViewer: ViewerRow | null = null;
@@ -40,6 +44,8 @@ let bulkAmountMode: BulkAmountMode = 'add';
 let copyFeedbackTimer: ReturnType<typeof setTimeout> | null = null;
 let bulkMergeViewers: ViewerRow[] = [];
 let mergeFieldUpdating = false;
+let loadingMoreViewers = false;
+let loadMoreObserver: IntersectionObserver | null = null;
 
 const el = {
   title: document.getElementById('title'),
@@ -54,6 +60,7 @@ const el = {
   addViewer: document.getElementById('add-viewer'),
   importStreamKit: document.getElementById('import-streamkit'),
   selectAll: document.getElementById('select-all') as HTMLInputElement,
+  viewersTable: document.getElementById('viewers-table'),
   viewersBody: document.getElementById('viewers-body'),
   loadingCell: document.getElementById('loading-cell'),
   colName: document.getElementById('col-name'),
@@ -338,6 +345,9 @@ const updateBulkBar = () => {
     el.selectAll.checked = visibleSelected === state.viewers.length;
     el.selectAll.indeterminate =
       visibleSelected > 0 && visibleSelected < state.viewers.length;
+  } else if (el.selectAll) {
+    el.selectAll.checked = false;
+    el.selectAll.indeterminate = false;
   }
 };
 
@@ -603,18 +613,52 @@ const loadState = async () => {
   await reloadViewers();
 };
 
-/** Reloads viewer list using current search/sort controls. */
-const reloadViewers = async () => {
+type ViewersPageResult = {
+  viewers: ViewerRow[];
+  total: number;
+  hasMore: boolean;
+};
+
+/**
+ * Fetches a viewer list page from the worker API.
+ * Search and sort are applied on the server across the full viewer list.
+ * @param offset Zero-based page offset.
+ * @param limit Maximum rows to return.
+ */
+const fetchViewersPage = async (
+  offset: number,
+  limit: number
+): Promise<ViewersPageResult> => {
   const search = el.search?.value.trim() ?? '';
   const sort = el.sort?.value ?? 'balance_desc';
-  const query = new URLSearchParams({ search, sort });
+  const query = new URLSearchParams({
+    search,
+    sort,
+    limit: String(limit),
+    offset: String(offset),
+  });
   const result = await apiFetch(`viewers?${query.toString()}`);
 
   if (!result.success) {
     throw new Error(result.message ?? 'Failed to load viewers');
   }
 
-  state.viewers = result.viewers ?? [];
+  return {
+    viewers: result.viewers ?? [],
+    total:
+      typeof result.total === 'number'
+        ? result.total
+        : (result.viewers?.length ?? 0),
+    hasMore: Boolean(result.hasMore),
+  };
+};
+
+/** Reloads viewer list using current search/sort controls (first page). */
+const reloadViewers = async () => {
+  const page = await fetchViewersPage(0, VIEWERS_PAGE_SIZE);
+  state.viewers = page.viewers;
+  state.totalViewers = page.total;
+  state.hasMoreViewers = page.hasMore;
 
   for (const id of [...selectedIds]) {
     if (!state.viewers.some(viewer => viewer.twitchId === id)) {
@@ -625,6 +669,58 @@ const reloadViewers = async () => {
   renderViewers();
 };
 
+/** Appends the next viewer page when the table sentinel becomes visible. */
+const loadMoreViewers = async () => {
+  if (!state.hasMoreViewers || loadingMoreViewers) {
+    return;
+  }
+
+  loadingMoreViewers = true;
+  renderViewers();
+
+  try {
+    const page = await fetchViewersPage(
+      state.viewers.length,
+      VIEWERS_PAGE_SIZE
+    );
+    state.viewers = [...state.viewers, ...page.viewers];
+    state.totalViewers = page.total;
+    state.hasMoreViewers = page.hasMore;
+  } finally {
+    loadingMoreViewers = false;
+    renderViewers();
+  }
+};
+
+/** Observes the table sentinel row to trigger lazy loading. */
+const setupLoadMoreObserver = (sentinel: HTMLElement) => {
+  const root = el.viewersTable;
+  if (!root) {
+    return;
+  }
+
+  loadMoreObserver?.disconnect();
+  loadMoreObserver = new IntersectionObserver(
+    entries => {
+      if (
+        entries.some(entry => entry.isIntersecting) &&
+        state.hasMoreViewers &&
+        !loadingMoreViewers
+      ) {
+        void loadMoreViewers();
+      }
+    },
+    { root, rootMargin: '120px' }
+  );
+  loadMoreObserver.observe(sentinel);
+};
+
+/** Disconnects lazy-load observer when the sentinel is removed. */
+const teardownLoadMoreObserver = () => {
+  loadMoreObserver?.disconnect();
+  loadMoreObserver = null;
+};
+
 /** Renders viewer table rows. */
 const renderViewers = () => {
   const body = el.viewersBody;
@@ -633,10 +729,11 @@ const renderViewers = () => {
   }
 
   body.innerHTML = '';
+  teardownLoadMoreObserver();
 
   if (el.viewerCount) {
     el.viewerCount.textContent = t('viewerCount', lang, {
-      count: state.viewers.length,
+      count: state.totalViewers,
     });
   }
 
@@ -707,6 +804,20 @@ const renderViewers = () => {
     actionsCell.appendChild(actions);
     row.appendChild(actionsCell);
     body.appendChild(row);
+  }
+
+  if (state.hasMoreViewers) {
+    const statusRow = document.createElement('tr');
+    statusRow.className = 'balance-load-more-sentinel';
+    const statusCell = document.createElement('td');
+    statusCell.colSpan = 4;
+    if (loadingMoreViewers) {
+      statusCell.className = 'balance-load-more-cell';
+      statusCell.textContent = t('loadingMore', lang);
+    }
+    statusRow.appendChild(statusCell);
+    body.appendChild(statusRow);
+    setupLoadMoreObserver(statusRow);
   }
 
   updateBulkBar();
@@ -1062,30 +1173,26 @@ const refreshAppData = async () => {
       }
     }
 
-    const search = el.search?.value.trim() ?? '';
-    const sort = el.sort?.value ?? 'balance_desc';
-    const query = new URLSearchParams({ search, sort });
-    const viewersResult = await apiFetch(`viewers?${query.toString()}`);
+    const loadedCount = Math.max(state.viewers.length, VIEWERS_PAGE_SIZE);
+    const page = await fetchViewersPage(0, loadedCount);
+    const nextViewers = page.viewers;
+    const viewersChanged =
+      JSON.stringify(state.viewers) !== JSON.stringify(nextViewers);
+    const totalChanged = state.totalViewers !== page.total;
 
-    if (viewersResult.success) {
-      const nextViewers = viewersResult.viewers ?? [];
-      const viewersChanged =
-        JSON.stringify(state.viewers) !== JSON.stringify(nextViewers);
+    if (viewersChanged || totalChanged) {
+      state.viewers = nextViewers;
+      state.totalViewers = page.total;
+      state.hasMoreViewers = page.hasMore;
 
-      if (viewersChanged) {
-        state.viewers = nextViewers;
-
-        for (const id of [...selectedIds]) {
-          if (!state.viewers.some(viewer => viewer.twitchId === id)) {
-            selectedIds.delete(id);
-          }
+      for (const id of [...selectedIds]) {
+        if (!state.viewers.some(viewer => viewer.twitchId === id)) {
+          selectedIds.delete(id);
         }
-
-        renderViewers();
-      } else if (currencyChanged) {
-        renderViewers();
       }
-    } else if (langChanged || currencyChanged) {
+
+      renderViewers();
+    } else if (currencyChanged || langChanged) {
       renderViewers();
     }
   } catch {

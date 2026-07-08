@@ -12,7 +12,7 @@ StreamKit+ application addon for **Twitch** streamers: tracks donations that did
 - Credits balance from dashboard **donation** events with **empty** `attach` (no overlay/sound/hotkey/timer fired)
 - Stores viewers by **Twitch id + login** (login change safe)
 - Balance currency: app default or USD / RUB / UAH / EUR / KZT / BYN; changing currency converts viewer balances, shop prices, and site-activation trigger thresholds
-- In-app window: search, sort, add/edit/delete viewers; **Shop** tab to bind overlay/sound/timer triggers to purchasable items (StreamKit+ `styles.css`)
+- In-app window: search, sort, add/edit/delete viewers; paginated viewer list (30 rows, lazy load); **Shop** tab to bind overlay/sound/timer triggers to purchasable items (StreamKit+ `styles.css`)
 - Registers **Site activation** dashboard trigger (`valueType: number`, cost in balance currency) for overlays/sounds
 - Backend sync + Socket.IO spend commands (see [BACKEND.md](./BACKEND.md))
 - Server backup of viewer balances (restore from server on startup when local list is empty, debounced upload on changes)

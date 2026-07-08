@@ -93,6 +93,11 @@ const strings: UiStrings = {
     ru: 'Загрузка…',
     uk: 'Завантаження…',
   },
+  loadingMore: {
+    en: 'Loading more…',
+    ru: 'Загрузка…',
+    uk: 'Завантаження…',
+  },
   empty: {
     en: 'No viewers yet',
     ru: 'Зрителей пока нет',

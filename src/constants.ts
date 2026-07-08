@@ -1,6 +1,12 @@
 /** Stable addon identifier from manifest.json. */
 export const ADDON_ID = 'balance-system';
 
+/** Default page size for the in-app viewer list. */
+export const VIEWERS_PAGE_SIZE = 30;
+
+/** Maximum page size accepted by the viewer list API. */
+export const VIEWERS_PAGE_MAX = 500;
+
 /** Viewer page grouping id for sound actions (not an installable addon). */
 export const SOUNDS_CATALOG_GROUP = 'streamkit-balance:sounds' as const;
 

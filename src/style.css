@@ -144,6 +144,26 @@
   background: color-mix(in srgb, var(--bg-display) 70%, var(--bg-panel) 30%);
 }
 
+.balance-load-more-cell {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  padding-block: 14px;
+}
+
+.balance-load-more-sentinel {
+  height: 1px;
+  padding: 0;
+  border: 0;
+  line-height: 0;
+}
+
+.balance-load-more-sentinel td {
+  height: 1px;
+  padding: 0;
+  border: 0;
+}
+
 .balance-field {
   display: flex;
   flex-direction: column;

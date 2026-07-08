@@ -1,4 +1,9 @@
-import { ADDON_ID, SUPPORTED_CURRENCIES } from './constants';
+import {
+  ADDON_ID,
+  SUPPORTED_CURRENCIES,
+  VIEWERS_PAGE_MAX,
+  VIEWERS_PAGE_SIZE,
+} from './constants';
 import {
   convertToBalanceCurrency,
   resolveBalanceCurrency,
@@ -78,6 +83,8 @@ export const registerHttpEndpoints = async () => {
     const search =
       typeof query.search === 'string' ? query.search.trim().toLowerCase() : '';
     const sort = typeof query.sort === 'string' ? query.sort : 'balance_desc';
+    const limit = parseViewersPageLimit(query.limit);
+    const offset = parseViewersPageOffset(query.offset);
 
     let viewers = [...params.viewers];
     if (search) {
@@ -91,7 +98,15 @@ export const registerHttpEndpoints = async () => {
 
     viewers.sort((a, b) => compareViewers(a, b, sort));
 
-    return { success: true, viewers };
+    const total = viewers.length;
+    const page = viewers.slice(offset, offset + limit);
+
+    return {
+      success: true,
+      viewers: page,
+      total,
+      hasMore: offset + page.length < total,
+    };
   });
 
   events.On('onSaveViewer', async ({ query, body }) => {
@@ -432,6 +447,30 @@ const compareViewers = (a: ViewerRow, b: ViewerRow, sort: string) => {
     default:
       return b.balance - a.balance;
   }
+};
+
+/**
+ * Parses viewer list page size from query string.
+ * @param raw Raw query value.
+ */
+const parseViewersPageLimit = (raw: unknown) => {
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return VIEWERS_PAGE_SIZE;
+  }
+  return Math.min(Math.floor(parsed), VIEWERS_PAGE_MAX);
+};
+
+/**
+ * Parses viewer list page offset from query string.
+ * @param raw Raw query value.
+ */
+const parseViewersPageOffset = (raw: unknown) => {
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return 0;
+  }
+  return Math.floor(parsed);
 };
 
 const parseShopItemBody = (body: unknown): BalanceShopItem | null => {
