@@ -109,7 +109,7 @@ AGENT.md
 package.json
 scripts/build.mjs     # copies/bundles src/ → dist/
 src/
-  logo.png            # icon (manifest.icon)
+  logo.svg            # icon (manifest.icon)
   index.ts / index.js # worker (when present)
   index.html          # web UI entry (when present)
   style.css, app.ts / app.js

@@ -8,7 +8,7 @@ const dist = join(root, 'dist');
 
 mkdirSync(dist, { recursive: true });
 copyFileSync(join(root, 'manifest.json'), join(dist, 'manifest.json'));
-copyFileSync(join(src, 'logo.png'), join(dist, 'logo.png'));
+copyFileSync(join(src, 'logo.svg'), join(dist, 'logo.svg'));
 
 const { build } = await import('esbuild');
 
@@ -29,4 +29,3 @@ await build({
   platform: 'browser',
   format: 'iife',
 });
-

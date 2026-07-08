@@ -44,7 +44,9 @@ const parseManifestLocalized = (
   }
   if (typeof value === 'string') {
     const trimmed = value.trim();
-    return trimmed ? { en: trimmed, ru: trimmed, uk: trimmed } : { en: fallback };
+    return trimmed
+      ? { en: trimmed, ru: trimmed, uk: trimmed }
+      : { en: fallback };
   }
 
   const en = value.en?.trim() || fallback;
@@ -104,7 +106,7 @@ const binaryStringToBase64 = (binary: string) => {
 };
 
 const fetchCatalogIconBase64 = async (repo: string, iconFile?: string) => {
-  const file = iconFile?.trim() || 'logo.png';
+  const file = iconFile?.trim() || 'logo.svg';
 
   if (file.toLowerCase().endsWith('.svg')) {
     const url = `${CATALOG_API_BASE}/static/${encodeCatalogRepoPath(repo)}/${encodeURIComponent(file)}`;
@@ -139,7 +141,9 @@ export const resolveAddonCatalogMeta = async (
   const config = (await api.config.getConfig()) as {
     addonsInstalled?: InstalledAddonRecord[];
   } | null;
-  const installed = config?.addonsInstalled?.find(entry => entry.id === addonId);
+  const installed = config?.addonsInstalled?.find(
+    entry => entry.id === addonId
+  );
   const repo = resolveCatalogRepo(addonId, installed);
 
   let meta: ResolvedAddonCatalogMeta = {
@@ -149,7 +153,9 @@ export const resolveAddonCatalogMeta = async (
   };
 
   try {
-    const manifestRaw = await network.request.get(buildCatalogManifestUrl(repo));
+    const manifestRaw = await network.request.get(
+      buildCatalogManifestUrl(repo)
+    );
     const manifest = JSON.parse(manifestRaw) as AddonManifestJson;
     meta = {
       name: parseManifestLocalized(manifest.name, addonId),
