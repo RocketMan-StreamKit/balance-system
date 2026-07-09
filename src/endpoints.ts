@@ -57,15 +57,10 @@ export const registerHttpEndpoints = async () => {
     await ensureBalanceCurrencySynced();
     const params = await loadParams();
     const currencyCode = await resolveBalanceCurrency();
-    const appConfig = (await api.config.getConfig()) as {
-      themeScheme?: string;
-    } | null;
-
     return {
       success: true,
       addonId: ADDON_ID,
       lang: LANG.current,
-      themeScheme: appConfig?.themeScheme ?? 'dark',
       currency: currencyCode,
       currencies: SUPPORTED_CURRENCIES,
       viewerPageUrl: params.viewer_page_url,

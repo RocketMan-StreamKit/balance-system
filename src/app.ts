@@ -250,28 +250,6 @@ const showCopyFeedback = () => {
   }, 2000);
 };
 
-/**
- * Applies app theme from settings to the document root.
- * @param themeScheme Theme scheme from app config.
- */
-const applyTheme = (themeScheme: string) => {
-  const root = document.documentElement;
-  const effective =
-    themeScheme === 'system'
-      ? window.matchMedia('(prefers-color-scheme: dark)').matches
-        ? 'dark'
-        : 'light'
-      : themeScheme === 'light'
-        ? 'light'
-        : 'dark';
-
-  if (effective === 'light') {
-    root.removeAttribute('data-theme');
-  } else {
-    root.setAttribute('data-theme', 'dark');
-  }
-};
-
 /** Fills a currency select with supported codes. */
 const fillCurrencySelect = (
   select: HTMLSelectElement | null,
@@ -334,7 +312,7 @@ const updateBulkBar = () => {
     el.bulkSelectedLabel.textContent = t('bulkSelected', lang, { count });
   }
 
-  if (el.bulkMerge) {
+  if (el.bulkMerge && el.bulkMerge instanceof HTMLButtonElement) {
     el.bulkMerge.disabled = count < 2;
   }
 
@@ -594,7 +572,6 @@ const loadState = async () => {
     lang = meta.lang;
   }
 
-  applyTheme(typeof meta.themeScheme === 'string' ? meta.themeScheme : 'dark');
   applyLocale();
 
   state.currency = meta.currency ?? 'USD';
@@ -1136,8 +1113,6 @@ const refreshAppData = async () => {
       meta.lang === 'ru' || meta.lang === 'uk' || meta.lang === 'en'
         ? meta.lang
         : lang;
-    const themeScheme =
-      typeof meta.themeScheme === 'string' ? meta.themeScheme : 'dark';
     const nextCurrency =
       typeof meta.currency === 'string' ? meta.currency : state.currency;
     const nextViewerPageUrl =
@@ -1150,7 +1125,6 @@ const refreshAppData = async () => {
     const viewerPageChanged = nextViewerPageUrl !== state.viewerPageUrl;
 
     lang = nextLang;
-    applyTheme(themeScheme);
 
     if (langChanged) {
       applyLocale();
