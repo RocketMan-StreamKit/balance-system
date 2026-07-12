@@ -47,7 +47,11 @@ export const parseRegisterResponse = (url: string, rawResponse: string) => {
   const trimmed = rawResponse.trim();
 
   if (trimmed.startsWith('<!DOCTYPE') || trimmed.startsWith('<html')) {
-    console.error('[balance] register HTML response from', url, trimmed.slice(0, 200));
+    console.error(
+      '[balance] register HTML response from',
+      url,
+      trimmed.slice(0, 200)
+    );
     const mapped = mapRegisterErrorCode('route_not_found');
     throw new Error(mapped[LANG.current] ?? mapped.en);
   }
@@ -61,8 +65,14 @@ export const parseRegisterResponse = (url: string, rawResponse: string) => {
   try {
     parsed = JSON.parse(trimmed) as typeof parsed;
   } catch (error) {
-    console.error('[balance] register non-JSON response from', url, trimmed.slice(0, 500));
-    throw new Error(`Backend returned non-JSON response (${trimmed.slice(0, 80)})`);
+    console.error(
+      '[balance] register non-JSON response from',
+      url,
+      trimmed.slice(0, 500)
+    );
+    throw new Error(
+      `Backend returned non-JSON response (${trimmed.slice(0, 80)})`
+    );
   }
 
   if (!parsed.success || !parsed.sessionToken) {

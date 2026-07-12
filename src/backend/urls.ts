@@ -45,7 +45,10 @@ export const resolveApiBaseUrl = async (
  * @param path Path after BALANCE_API_PATH.
  * @param params Optional addon params.
  */
-export const buildApiUrl = async (path: string, params?: BalanceAddonParams) => {
+export const buildApiUrl = async (
+  path: string,
+  params?: BalanceAddonParams
+) => {
   const base = await resolveApiBaseUrl(params);
   const suffix = path.startsWith('/') ? path : `/${path}`;
   return `${base}${BALANCE_API_PATH}${suffix}`;
@@ -56,11 +59,18 @@ export const buildApiUrl = async (path: string, params?: BalanceAddonParams) => 
  * @param hostBase API origin, e.g. `https://local.rocketman-streams.com:443`.
  * @param socketPath Socket.IO HTTP path.
  */
-export const buildWebSocketConnectUrl = (hostBase: string, socketPath: string) => {
+export const buildWebSocketConnectUrl = (
+  hostBase: string,
+  socketPath: string
+) => {
   const base = new URL(hostBase);
   const port =
     base.port ||
-    (base.protocol === 'https:' ? '443' : base.protocol === 'http:' ? '80' : '443');
+    (base.protocol === 'https:'
+      ? '443'
+      : base.protocol === 'http:'
+        ? '80'
+        : '443');
   const path = socketPath.startsWith('/') ? socketPath : `/${socketPath}`;
   return `wss://${base.hostname}:${port}${path}/?EIO=4&transport=websocket`;
 };

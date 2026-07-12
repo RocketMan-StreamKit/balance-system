@@ -169,7 +169,11 @@ const parseBackupResponse = (url: string, rawResponse: string) => {
   const trimmed = rawResponse.trim();
 
   if (trimmed.startsWith('<!DOCTYPE') || trimmed.startsWith('<html')) {
-    console.error('[balance] backup HTML response from', url, trimmed.slice(0, 200));
+    console.error(
+      '[balance] backup HTML response from',
+      url,
+      trimmed.slice(0, 200)
+    );
     return {
       success: false as const,
       code: 'route_not_found',
@@ -180,8 +184,14 @@ const parseBackupResponse = (url: string, rawResponse: string) => {
   try {
     return JSON.parse(trimmed) as BackupApiResponse;
   } catch (error) {
-    console.error('[balance] backup non-JSON response from', url, trimmed.slice(0, 500));
-    throw new Error(`Backend returned non-JSON response (${trimmed.slice(0, 80)})`);
+    console.error(
+      '[balance] backup non-JSON response from',
+      url,
+      trimmed.slice(0, 500)
+    );
+    throw new Error(
+      `Backend returned non-JSON response (${trimmed.slice(0, 80)})`
+    );
   }
 };
 
