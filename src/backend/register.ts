@@ -91,18 +91,24 @@ export const parseRegisterResponse = (url: string, rawResponse: string) => {
  */
 export const resolveLicenseAuth = () => {
   if (!license.active) {
-    throw new Error(
-      'StreamKit+ license is inactive. Activate your license in Settings → License.'
-    );
+    const message = {
+      en: 'StreamKit+ license is inactive. Activate your license in Settings → License.',
+      ru: 'Лицензия StreamKit+ неактивна. Активируйте лицензию в Настройки → Лицензия.',
+      uk: 'Ліцензія StreamKit+ неактивна. Активуйте ліцензію в Налаштування → Ліцензія.',
+    };
+    throw new Error(message[LANG.current] ?? message.en);
   }
 
   const licenseId = license.id.trim();
   const accessToken = license.keyMd5.trim();
 
   if (!licenseId || !accessToken) {
-    throw new Error(
-      'License data is unavailable. Activate your license in Settings → License and restart the addon.'
-    );
+    const message = {
+      en: 'License data is unavailable. Activate your license in Settings → License and restart the addon.',
+      ru: 'Данные лицензии недоступны. Активируйте лицензию в Настройки → Лицензия и перезапустите аддон.',
+      uk: 'Дані ліцензії недоступні. Активуйте ліцензію в Налаштування → Ліцензія та перезапустіть аддон.',
+    };
+    throw new Error(message[LANG.current] ?? message.en);
   }
 
   return {
