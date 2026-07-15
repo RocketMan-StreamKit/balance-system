@@ -25,6 +25,8 @@ type ReconnectHook = (
 type NamespaceConnectedHook = () => void | Promise<void>;
 
 type AddonWebSocket = {
+  /** `0` connecting, `1` open, `2` closing, `3` closed. */
+  readonly state: 0 | 1 | 2 | 3;
   On: (
     event: 'open' | 'message' | 'close' | 'error',
     handler: (payload: unknown) => void
@@ -33,6 +35,9 @@ type AddonWebSocket = {
   Close: (code?: number, reason?: string) => void;
   Destroy: () => void;
 };
+
+/** WebSocket readyState value for an open connection. */
+const WS_OPEN = 1 as const;
 
 type EngineOpenPayload = {
   sid?: string;
@@ -133,12 +138,18 @@ export class BalanceSocketClient {
 
   /** Emits a Socket.IO event to the server. */
   emit(event: string, data: unknown) {
-    if (!this.activeSocket || !this.namespaceConnected) {
+    const socket = this.activeSocket;
+    if (!socket || !this.namespaceConnected || !this.isSocketOpen(socket)) {
       return;
     }
-    this.activeSocket.Send(
-      `42${this.namespacePacketPrefix},${JSON.stringify([event, data])}`
-    );
+    try {
+      socket.Send(
+        `42${this.namespacePacketPrefix},${JSON.stringify([event, data])}`
+      );
+    } catch (error) {
+      console.warn('[balance] socket emit failed:', error);
+      this.markTransportDead(socket);
+    }
   }
 
   /** Opens websocket transport and connects namespace. */
@@ -257,7 +268,16 @@ export class BalanceSocketClient {
     }
 
     if (engineType === '2') {
-      socket.Send(payload === 'probe' ? '3probe' : '3');
+      if (!this.isSocketOpen(socket)) {
+        this.markTransportDead(socket);
+        return;
+      }
+      try {
+        socket.Send(payload === 'probe' ? '3probe' : '3');
+      } catch (error) {
+        console.warn('[balance] socket pong failed:', error);
+        this.markTransportDead(socket);
+      }
       return;
     }
 
@@ -335,7 +355,19 @@ export class BalanceSocketClient {
       // Keep default ping interval when handshake JSON is unexpected.
     }
 
-    socket.Send(`40${this.namespacePacketPrefix},${JSON.stringify(this.auth)}`);
+    if (!this.isSocketOpen(socket)) {
+      this.markTransportDead(socket);
+      return;
+    }
+
+    try {
+      socket.Send(
+        `40${this.namespacePacketPrefix},${JSON.stringify(this.auth)}`
+      );
+    } catch (error) {
+      console.warn('[balance] socket namespace connect send failed:', error);
+      this.markTransportDead(socket);
+    }
   }
 
   private startPing() {
@@ -344,7 +376,14 @@ export class BalanceSocketClient {
 
     const tickMs = Math.max(5_000, Math.min(this.pingInterval, 15_000));
     this.pingTimer = setInterval(() => {
-      if (!this.activeSocket || !this.namespaceConnected) {
+      const socket = this.activeSocket;
+      if (!socket || !this.namespaceConnected) {
+        return;
+      }
+
+      if (!this.isSocketOpen(socket)) {
+        console.warn('[balance] socket not open during ping, reconnecting');
+        this.markTransportDead(socket);
         return;
       }
 
@@ -354,17 +393,52 @@ export class BalanceSocketClient {
       }
 
       try {
-        this.activeSocket.Send('2');
+        socket.Send('2');
       } catch (error) {
         console.warn('[balance] socket ping failed:', error);
-        if (!this.intentionalClose) {
-          this.namespaceConnected = false;
-          this.stopPing();
-          this.activeSocket = null;
-          this.scheduleReconnect('transport');
-        }
+        this.markTransportDead(socket);
       }
     }, tickMs);
+  }
+
+  /**
+   * Returns whether the sandbox WebSocket is in the open readyState.
+   * @param socket Addon WebSocket handle from `network.websocket.connect`.
+   * @example this.isSocketOpen(socket) → true
+   */
+  private isSocketOpen(socket: AddonWebSocket) {
+    return socket.state === WS_OPEN;
+  }
+
+  /**
+   * Tears down a dead transport without waiting for a delayed `close` event.
+   * Always `Destroy()`s the socket so the host connection slot is released.
+   * @param socket Socket that failed Send / left the open state.
+   * @param reason Reconnect reason recorded for the next attempt.
+   * @example this.markTransportDead(socket, 'transport');
+   */
+  private markTransportDead(
+    socket: AddonWebSocket,
+    reason: BalanceSocketReconnectReason = 'transport'
+  ) {
+    if (this.intentionalClose) {
+      return;
+    }
+
+    this.namespaceConnected = false;
+    this.stopPing();
+
+    if (this.activeSocket === socket) {
+      this.activeSocket = null;
+    }
+
+    try {
+      socket.Destroy();
+    } catch (error) {
+      console.warn('[balance] socket destroy failed:', error);
+    }
+
+    this.scheduleReconnect(reason);
   }
 
   private stopPing() {
