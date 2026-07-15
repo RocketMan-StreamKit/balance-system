@@ -357,6 +357,12 @@ export class BalanceSocketClient {
         this.activeSocket.Send('2');
       } catch (error) {
         console.warn('[balance] socket ping failed:', error);
+        if (!this.intentionalClose) {
+          this.namespaceConnected = false;
+          this.stopPing();
+          this.activeSocket = null;
+          this.scheduleReconnect('transport');
+        }
       }
     }, tickMs);
   }
