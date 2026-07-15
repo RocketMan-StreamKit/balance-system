@@ -11,7 +11,7 @@
     "uk": "Враховує донати без тригерів, веде баланс глядачів і надає веб-сторінку з авторизацією Twitch для витрати балансу на дії на стрімі."
   },
   "type": "application",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "author": "RocketMan System",
   "icon": "logo.svg",
   "depends_on": [
