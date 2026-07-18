@@ -262,8 +262,15 @@ export const startBackendConnection = async () => {
     await syncStateToBackend();
     await connectBalanceSocket();
   } catch (error) {
+    const fallback = {
+      en: 'Backend registration failed',
+      ru: 'Ошибка регистрации на сервере',
+      uk: 'Помилка реєстрації на сервері',
+    };
     const message =
-      error instanceof Error ? error.message : 'Backend registration failed';
+      error instanceof Error
+        ? error.message
+        : (fallback[LANG.current] ?? fallback.en);
     console.error('[balance] backend connection failed:', message, error);
     status.Update({
       current: 'error',
